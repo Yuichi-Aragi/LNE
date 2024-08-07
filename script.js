@@ -69,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleLoadingIndicator = (show) => {
         domElements.loadingIndicator?.classList.toggle('active', show);
     };
-
     const displayErrorMessage = (message) => {
         if (domElements.errorDisplay) {
             domElements.errorDisplay.textContent = message;
@@ -84,8 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleLoadingIndicator(true);
         try {
             const htmlContent = await fetchWithTimeout(`${settings.proxyEndpoint}${encodeURIComponent(settings.targetEndpoint)}`);
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlContent, 'text/html');
+            const doc = htmlparser2.parseDocument(htmlContent);
             extractImagesAndPdfLinks(doc);
             if (appState.imageList.length > 0) {
                 await displayImages();
@@ -100,21 +98,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const extractImagesAndPdfLinks = (doc) => {
-        const newImages = Array.from(doc.querySelectorAll('img[loading="lazy"][decoding="async"].alignnone'));
-        const pdfLinks = doc.querySelectorAll('h3 > a');
+        const newImages = htmlparser2.DomUtils.findAll(elem => elem.name === 'img' && elem.attribs['loading'] === 'lazy' && elem.attribs['decoding'] === 'async', doc);
+        const pdfLinks = htmlparser2.DomUtils.findAll(elem => elem.name === 'a' && elem.parent && elem.parent.name === 'h3', doc);
 
         pdfLinks.forEach(link => {
-            const pdfUrl = link.href.trim();
-            const textSpan = link.querySelector('span[style="color: #ff6600;"]');
-            const text = textSpan ? textSpan.textContent.trim() : link.textContent.trim();
+            const pdfUrl = link.attribs.href.trim();
+            const textSpan = htmlparser2.DomUtils.findOne(elem => elem.name === 'span' && elem.attribs.style === 'color: #ff6600;', link.children);
+            const text = textSpan ? htmlparser2.DomUtils.getText(textSpan).trim() : htmlparser2.DomUtils.getText(link).trim();
 
             if (pdfUrl && text) {
                 appState.pdfTextMap.set(pdfUrl, (appState.pdfTextMap.get(pdfUrl) || []).concat(text));
             }
         });
 
-        appState.imageList.push(...newImages.filter(img => !appState.loadedImageSet.has(img.src)));
-        newImages.forEach(img => appState.loadedImageSet.add(img.src));
+        appState.imageList.push(...newImages.filter(img => !appState.loadedImageSet.has(img.attribs.src)));
+        newImages.forEach(img => appState.loadedImageSet.add(img.attribs.src));
     };
 
     const displayImages = async () => {
@@ -126,24 +124,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const gridItems = await Promise.all(imageBatch.map(img => createGridItem(img)));
         gridItems.forEach(item => fragment.appendChild(item));
 
-        domElements.bookGrid?.appendChild(fragment);
+        domElements.bookGrid.appendChild(fragment);
         appState.currentBatchIndex++;
     };
 
     const createGridItem = async (img) => {
         const gridItem = createElement('div', { class: 'grid-item', 'data-aos': 'fade-up' });
         const imgElement = new Image();
-        imgElement.src = img.src;
+        imgElement.src = img.attribs.src;
         imgElement.className = 'lazyload';
         imgElement.alt = 'Book Cover';
         imgElement.onerror = () => imgElement.src = settings.defaultImage;
         imgElement.onload = () => imgElement.style.display = 'block';
         gridItem.appendChild(imgElement);
 
-        const anchorElement = img.closest('a');
-        if (anchorElement?.href) {
-            imgElement.addEventListener('click', () => window.open(anchorElement.href, '_blank'));
-            const texts = appState.pdfTextMap.get(anchorElement.href);
+        const anchorElement = htmlparser2.DomUtils.findOne(elem => elem.name === 'a', img.parent);
+        if (anchorElement?.attribs.href) {
+            imgElement.addEventListener('click', () => window.open(anchorElement.attribs.href, '_blank'));
+            const texts = appState.pdfTextMap.get(anchorElement.attribs.href);
             if (texts?.length) {
                 const textElement = createElement('p', { class: 'textElement' }, texts.join(', '));
                 gridItem.appendChild(textElement);
@@ -196,23 +194,24 @@ document.addEventListener('DOMContentLoaded', () => {
         appState.searchOngoing = true;
         const searchUrl = `https://jnovels.com/?s=${encodeURIComponent(query)}`;
         const searchProxyUrl = `${settings.proxyEndpoint}${encodeURIComponent(searchUrl)}`;
-        domElements.bookGrid.innerHTML = '';
+        domElements.bookGrid.innerHTML = ''; // Clear previous results
         toggleLoadingIndicator(true);
         try {
             const htmlContent = await fetchWithTimeout(searchProxyUrl);
-            const doc = new DOMParser().parseFromString(htmlContent, 'text/html');
-            const items = doc.querySelectorAll('a[rel="bookmark"]');
+            const doc = htmlparser2.parseDocument(htmlContent);
+            const items = htmlparser2.DomUtils.findAll(elem => elem.name === 'a' && elem.attribs.rel === 'bookmark', doc);
+            const fragment = document.createDocumentFragment();
+
             if (items.length === 0) {
                 domElements.bookGrid.innerHTML = 'No results found.';
             } else {
-                const fragment = document.createDocumentFragment();
                 items.forEach(item => {
                     const gridItem = createSearchResultItem(item);
                     if (gridItem) {
                         fragment.appendChild(gridItem);
                     }
                 });
-                domElements.bookGrid?.appendChild(fragment);
+                domElements.bookGrid.appendChild(fragment);
             }
         } catch (error) {
             console.error('Fetch or parsing error:', error);
@@ -224,13 +223,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const createSearchResultItem = (item) => {
-        const img = item.querySelector('img');
-        const title = item.getAttribute('title');
-        const href = item.getAttribute('href');
+        const img = htmlparser2.DomUtils.findOne(elem => elem.name === 'img', item.children);
+        const title = item.attribs.title;
+        const href = item.attribs.href;
         if (img && title && href) {
             const div = createElement('div', { class: 'grid-item' });
             const a = createElement('a', { href, target: '_blank', class: 'grid-item-link' });
-            const imgElement = createElement('img', { src: img.src, alt: title });
+            const imgElement = createElement('img', { src: img.attribs.src, alt: title });
             imgElement.onerror = () => imgElement.src = settings.defaultImage;
             imgElement.onload = () => imgElement.style.display = 'block';
             const titleElement = createElement('div', { class: 'textElement' }, title);
@@ -240,8 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return null;
     };
-    
-     const performSearch = debounce((query) => {
+
+    const performSearch = debounce((query) => {
         if (query.trim()) {
             fetchAndShowResults(query);
         }
@@ -255,33 +254,35 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Event Listeners
-    domElements.searchInput?.addEventListener('input', (event) => performSearch(event.target.value));
-    domElements.searchButton?.addEventListener('click', () => performSearch(domElements.searchInput.value));
-    domElements.menuButton?.addEventListener('click', () => togglePanel(domElements.menuPanel));
-
-    document.getElementById('library-link')?.addEventListener('click', () => {
-        domElements.menuPanel?.classList.remove('active');
-        togglePanel(domElements.libraryPanel);
-    });
-
-    document.getElementById('settings-link')?.addEventListener('click', () => {
-        domElements.menuPanel?.classList.remove('active');
-        togglePanel(domElements.settingsPanel);
-    });
+    domElements.searchInput.addEventListener('input', (event) => performSearch(event.target.value));
+    domElements.searchButton.addEventListener('click', () => performSearch(domElements.searchInput.value));
+    domElements.menuButton.addEventListener('click', () => togglePanel(domElements.menuPanel));
 
     document.addEventListener('click', (event) => {
+        const target = event.target.closest('a');
+        if (target) {
+            if (target.id === 'library-link') {
+                domElements.menuPanel.classList.remove('active');
+                togglePanel(domElements.libraryPanel);
+            } else if (target.id === 'settings-link') {
+                domElements.menuPanel.classList.remove('active');
+                togglePanel(domElements.settingsPanel);
+            }
+        }
+
+        // Close panels if clicking outside
         if (!event.target.closest('.panel') && !event.target.closest('.menu-btn')) {
-            [domElements.menuPanel, domElements.libraryPanel, domElements.settingsPanel].forEach(panel => panel?.classList.remove('active'));
+            [domElements.menuPanel, domElements.libraryPanel, domElements.settingsPanel].forEach(panel => panel.classList.remove('active'));
             appState.panelActive = false;
         }
     });
 
-    domElements.themeSwitcher?.addEventListener('change', () => {
+    domElements.themeSwitcher.addEventListener('change', () => {
         document.body.classList.toggle('dark-theme');
         localStorage.setItem('darkTheme', document.body.classList.contains('dark-theme'));
     });
 
-    domElements.gridViewSizeSlider?.addEventListener('input', (event) => {
+    domElements.gridViewSizeSlider.addEventListener('input', (event) => {
         const size = event.target.value;
         document.body.setAttribute('data-grid-size', size);
         localStorage.setItem('gridSize', size);
@@ -291,17 +292,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedTheme = localStorage.getItem('darkTheme');
         if (savedTheme === 'true') {
             document.body.classList.add('dark-theme');
-            if (domElements.themeSwitcher) {
-                domElements.themeSwitcher.checked = true;
-            }
+            domElements.themeSwitcher.checked = true;
         }
 
         const savedGridSize = localStorage.getItem('gridSize');
         if (savedGridSize) {
             document.body.setAttribute('data-grid-size', savedGridSize);
-            if (domElements.gridViewSizeSlider) {
-                domElements.gridViewSizeSlider.value = savedGridSize;
-            }
+            domElements.gridViewSizeSlider.value = savedGridSize;
         }
 
         if (typeof AOS !== 'undefined') {
@@ -315,14 +312,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Register Service Worker for offline support
     if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => {
-                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(error => {
-                console.error('ServiceWorker registration failed: ', error);
-            });
-    });
-}
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(error => {
+                    console.error('ServiceWorker registration failed: ', error);
+                });
+        });
+    }
 });

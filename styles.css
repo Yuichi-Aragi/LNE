@@ -49,7 +49,6 @@ header {
     box-shadow: 0 2px 5px var(--shadow-color);
 }
 
-/* Buttons */
 /* Menu Button */
 .menu-btn {
     background-color: transparent;
@@ -62,10 +61,7 @@ header {
     right: -10px;
     border-radius: 50%;
     z-index: 102;
-    transition: background-color var(--transition-speed), transform var(--transition-speed);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    transition: transform var(--transition-speed);
 }
 
 .menu-btn:hover {
@@ -83,7 +79,6 @@ header {
 .bar {
     height: 4px;
     background-color: var(--secondary-color);
-    border-radius: 0;
     transition: background-color var(--transition-speed);
 }
 
@@ -100,15 +95,9 @@ header {
     padding: 8px 16px;
     box-shadow: 0 2px 5px var(--shadow-color);
     transition: box-shadow var(--transition-speed);
-    margin-right: 60px;
-}
-
-.search-bar.active {
-    box-shadow: 0 4px 10px var(--shadow-color);
 }
 
 .search-input {
-
     flex: 1;
     border: none;
     background-color: transparent;
@@ -120,7 +109,6 @@ header {
 
 .search-input::placeholder {
     color: #999;
-    
 }
 
 .search-btn {
@@ -140,7 +128,6 @@ header {
 .search-btn svg {
     width: 24px;
     height: 24px;
-   
     transition: stroke var(--transition-speed);
 }
 
@@ -162,11 +149,10 @@ main {
 .book-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    grid-gap: 20px;
-    padding: 20px;
-    width: 100%;
+    gap: 20px;
     max-width: 1200px;
     margin: 0 auto;
+    padding: 20px;
 }
 
 /* Skeleton Loader */
@@ -174,7 +160,7 @@ main {
     background: #e0e0e0;
     border-radius: 10px;
     animation: pulse 1.5s infinite;
-    height: 300px; /* Adjust height for skeleton items */
+    height: 300px;
 }
 
 /* Grid Item */
@@ -184,11 +170,8 @@ main {
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     cursor: pointer;
-    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
 }
 
 .grid-item img {
@@ -216,16 +199,9 @@ main {
     padding: 10px;
     background-color: rgba(0, 0, 0, 0.6);
     color: white;
-    font-family: 'Playfair Display';
+    font-family: 'Playfair Display', serif;
     font-size: 15px;
     text-align: center;
-    transition: opacity var(--transition-speed);
-    opacity: 1;
-    z-index: 2;
-}
-
-.grid-item:hover .textElement {
-    opacity: 1;
 }
 
 /* Panels */
@@ -242,7 +218,6 @@ main {
     z-index: 101;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
 }
 
 .panel h3 {
@@ -255,7 +230,6 @@ main {
 .panel ul {
     list-style-type: none;
     padding: 0;
-    width: 100%;
 }
 
 .panel li {
@@ -266,12 +240,12 @@ main {
     color: var(--text-color);
     text-decoration: none;
     font-size: 18px;
-    transition: color var(--transition-speed), background-color var(--transition-speed);
     display: block;
     padding: 10px;
     border-radius: 5px;
     background-color: var(--secondary-color);
     box-shadow: 0 2px 5px var(--shadow-color);
+    transition: color var(--transition-speed), background-color var(--transition-speed);
 }
 
 .panel a:hover {
@@ -420,27 +394,9 @@ input[type="range"]::-webkit-slider-runnable-track {
     100% { background-color: #e0e0e0; }
 }
 
-@keyframes fadeIn {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-}
-
-@keyframes scaleIn {
-    0% { transform: scale(0.8); }
-    100% { transform: scale(1); }
-}
-
 @keyframes slideUp {
     0% { transform: translateY(20px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
-}
-
-.title {
-    animation: slideUp var(--transition-speed) ease-in-out;
-}
-
-.search-bar, .menu-btn {
-    animation: scaleIn var(--transition-speed) ease-in-out;
 }
 
 /* Responsive Design */
@@ -448,20 +404,10 @@ input[type="range"]::-webkit-slider-runnable-track {
     .book-grid {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
-
-    .grid-item {
-        max-width: 220px;
-        max-height: 330px;
-    }
 }
 
 @media (max-width: 480px) {
     .book-grid {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-
-    .grid-item {
-        max-width: 180px;
-        max-height: 270px;
     }
 }
