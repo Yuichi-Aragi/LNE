@@ -83,7 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleLoadingIndicator(true);
         try {
             const htmlContent = await fetchWithTimeout(`${settings.proxyEndpoint}${encodeURIComponent(settings.targetEndpoint)}`);
-            const doc = htmlparser2.parseDocument(htmlContent);
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
             extractImagesAndPdfLinks(doc);
             if (appState.imageList.length > 0) {
                 await displayImages();
@@ -98,21 +99,21 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const extractImagesAndPdfLinks = (doc) => {
-        const newImages = htmlparser2.DomUtils.findAll(elem => elem.name === 'img' && elem.attribs['loading'] === 'lazy' && elem.attribs['decoding'] === 'async', doc);
-        const pdfLinks = htmlparser2.DomUtils.findAll(elem => elem.name === 'a' && elem.parent && elem.parent.name === 'h3', doc);
+        const newImages = Array.from(doc.querySelectorAll('img[loading="lazy"][decoding="async"]'));
+        const pdfLinks = Array.from(doc.querySelectorAll('a[href]')).filter(a => a.closest('h3'));
 
         pdfLinks.forEach(link => {
-            const pdfUrl = link.attribs.href.trim();
-            const textSpan = htmlparser2.DomUtils.findOne(elem => elem.name === 'span' && elem.attribs.style === 'color: #ff6600;', link.children);
-            const text = textSpan ? htmlparser2.DomUtils.getText(textSpan).trim() : htmlparser2.DomUtils.getText(link).trim();
+            const pdfUrl = link.href.trim();
+            const textSpan = link.querySelector('span[style="color: #ff6600;"]');
+            const text = textSpan ? textSpan.textContent.trim() : link.textContent.trim();
 
             if (pdfUrl && text) {
                 appState.pdfTextMap.set(pdfUrl, (appState.pdfTextMap.get(pdfUrl) || []).concat(text));
             }
         });
 
-        appState.imageList.push(...newImages.filter(img => !appState.loadedImageSet.has(img.attribs.src)));
-        newImages.forEach(img => appState.loadedImageSet.add(img.attribs.src));
+        appState.imageList.push(...newImages.filter(img => !appState.loadedImageSet.has(img.src)));
+        newImages.forEach(img => appState.loadedImageSet.add(img.src));
     };
 
     const displayImages = async () => {
@@ -131,17 +132,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const createGridItem = async (img) => {
         const gridItem = createElement('div', { class: 'grid-item', 'data-aos': 'fade-up' });
         const imgElement = new Image();
-        imgElement.src = img.attribs.src;
+        imgElement.src = img.src;
         imgElement.className = 'lazyload';
         imgElement.alt = 'Book Cover';
         imgElement.onerror = () => imgElement.src = settings.defaultImage;
         imgElement.onload = () => imgElement.style.display = 'block';
         gridItem.appendChild(imgElement);
 
-        const anchorElement = htmlparser2.DomUtils.findOne(elem => elem.name === 'a', img.parent);
-        if (anchorElement?.attribs.href) {
-            imgElement.addEventListener('click', () => window.open(anchorElement.attribs.href, '_blank'));
-            const texts = appState.pdfTextMap.get(anchorElement.attribs.href);
+        const anchorElement = img.closest('a');
+        if (anchorElement?.href) {
+            imgElement.addEventListener('click', () => window.open(anchorElement.href, '_blank'));
+            const texts = appState.pdfTextMap.get(anchorElement.href);
             if (texts?.length) {
                 const textElement = createElement('p', { class: 'textElement' }, texts.join(', '));
                 gridItem.appendChild(textElement);
@@ -198,8 +199,9 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleLoadingIndicator(true);
         try {
             const htmlContent = await fetchWithTimeout(searchProxyUrl);
-            const doc = htmlparser2.parseDocument(htmlContent);
-            const items = htmlparser2.DomUtils.findAll(elem => elem.name === 'a' && elem.attribs.rel === 'bookmark', doc);
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+            const items = Array.from(doc.querySelectorAll('a[rel="bookmark"]'));
             const fragment = document.createDocumentFragment();
 
             if (items.length === 0) {
@@ -223,13 +225,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const createSearchResultItem = (item) => {
-        const img = htmlparser2.DomUtils.findOne(elem => elem.name === 'img', item.children);
-        const title = item.attribs.title;
-        const href = item.attribs.href;
+        const img = item.querySelector('img');
+        const title = item.title;
+        const href = item.href;
         if (img && title && href) {
             const div = createElement('div', { class: 'grid-item' });
             const a = createElement('a', { href, target: '_blank', class: 'grid-item-link' });
-            const imgElement = createElement('img', { src: img.attribs.src, alt: title });
+            const imgElement = createElement('img', { src: img.src, alt: title });
             imgElement.onerror = () => imgElement.src = settings.defaultImage;
             imgElement.onload = () => imgElement.style.display = 'block';
             const titleElement = createElement('div', { class: 'textElement' }, title);
