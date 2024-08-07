@@ -9,8 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         observerThreshold: 0.1,
         observerRootMargin: '200px',
         errorMessageDuration: 5000,
-        requestTimeout: 10000,
-        defaultImage: 'default-image.jpg'
+        requestTimeout: 10000
     };
 
     const domElements = {
@@ -69,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleLoadingIndicator = (show) => {
         domElements.loadingIndicator?.classList.toggle('active', show);
     };
+
     const displayErrorMessage = (message) => {
         if (domElements.errorDisplay) {
             domElements.errorDisplay.textContent = message;
@@ -135,7 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
         imgElement.src = img.src;
         imgElement.className = 'lazyload';
         imgElement.alt = 'Book Cover';
-        imgElement.onerror = () => imgElement.src = settings.defaultImage;
         imgElement.onload = () => imgElement.style.display = 'block';
         gridItem.appendChild(imgElement);
 
@@ -232,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const div = createElement('div', { class: 'grid-item' });
             const a = createElement('a', { href, target: '_blank', class: 'grid-item-link' });
             const imgElement = createElement('img', { src: img.src, alt: title });
-            imgElement.onerror = () => imgElement.src = settings.defaultImage;
             imgElement.onload = () => imgElement.style.display = 'block';
             const titleElement = createElement('div', { class: 'textElement' }, title);
             a.append(imgElement, titleElement);
@@ -286,7 +284,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     domElements.gridViewSizeSlider.addEventListener('input', (event) => {
         const size = event.target.value;
-        document.body.setAttribute('data-grid-size', size);
+        document.body.classList.remove(...Array.from(document.body.classList).filter(cls => cls.startsWith('grid-size-')));
+        document.body.classList.add(`grid-size-${size}`);
         localStorage.setItem('gridSize', size);
     });
 
@@ -299,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const savedGridSize = localStorage.getItem('gridSize');
         if (savedGridSize) {
-            document.body.setAttribute('data-grid-size', savedGridSize);
+            document.body.classList.add(`grid-size-${savedGridSize}`);
             domElements.gridViewSizeSlider.value = savedGridSize;
         }
 
