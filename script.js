@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const settings = {
         proxyEndpoint: 'https://api.allorigins.win/raw?url=',
         targetEndpoint: 'https://jnovels.com/top-light-novels-to-read/',
@@ -9,7 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
         observerThreshold: 0.1,
         observerRootMargin: '200px',
         errorMessageDuration: 5000,
-        requestTimeout: 10000
+        requestTimeout: 10000,
+        maxCacheSize: 80 * 1024 * 1024, // 80 MB
+        localStorageKeys: {
+            darkTheme: 'darkTheme',
+            gridSize: 'gridSize'
+        }
     };
 
     const domElements = {
@@ -37,20 +42,74 @@ document.addEventListener('DOMContentLoaded', () => {
         observerInstance: null
     };
 
-    // Utility Functions
-    const createElement = (tag, attributes = {}, ...children) => {
-        const element = document.createElement(tag);
-        Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
-        children.forEach(child => typeof child === 'string' ? element.textContent = child : element.appendChild(child));
-        return element;
+    let db;
+
+    const initIndexedDB = async () => {
+        try {
+            db = await new Promise((resolve, reject) => {
+                const request = indexedDB.open('CacheDB', 1);
+                request.onerror = () => reject(new Error('Error opening IndexedDB'));
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    db.createObjectStore('cachedData', { keyPath: 'url' });
+                };
+            });
+        } catch (error) {
+            console.error('IndexedDB initialization failed:', error);
+            displayErrorMessage('Failed to initialize cache. Some features may not work properly.');
+        }
     };
 
-    const debounce = (func, delay) => {
-        let timeout;
-        return (...args) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func(...args), delay);
-        };
+    const addToCache = async (url, data) => {
+        if (!db) return;
+        const transaction = db.transaction('cachedData', 'readwrite');
+        const store = transaction.objectStore('cachedData');
+        await store.put({ url, data, timestamp: Date.now() });
+        await manageCacheSize(store);
+    };
+
+    const manageCacheSize = async (store) => {
+        const allData = await getAllCachedData();
+        let totalSize = allData.reduce((sum, item) => sum + item.data.length, 0);
+
+        if (totalSize > settings.maxCacheSize) {
+            allData.sort((a, b) => a.timestamp - b.timestamp);
+            while (totalSize > settings.maxCacheSize && allData.length) {
+                const itemToRemove = allData.shift();
+                await store.delete(itemToRemove.url);
+                totalSize -= itemToRemove.data.length;
+            }
+        }
+    };
+
+    const getCachedData = async (url) => {
+        if (!db) return null;
+        const transaction = db.transaction('cachedData', 'readonly');
+        const store = transaction.objectStore('cachedData');
+        const request = store.get(url);
+        return new Promise((resolve) => {
+            request.onsuccess = () => resolve(request.result ? request.result.data : null);
+            request.onerror = () => resolve(null);
+        });
+    };
+
+    const getAllCachedData = () => {
+        if (!db) return [];
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction('cachedData', 'readonly');
+            const store = transaction.objectStore('cachedData');
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(new Error('Error fetching all cached data'));
+        });
+    };
+
+    const clearCacheOnRefresh = async () => {
+        if (!db) return;
+        const transaction = db.transaction('cachedData', 'readwrite');
+        const store = transaction.objectStore('cachedData');
+        await store.clear();
     };
 
     const fetchWithTimeout = async (url, options = {}, timeout = settings.requestTimeout) => {
@@ -59,9 +118,33 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(url, { ...options, signal: controller.signal });
             if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-            return await response.text();
+            const data = await response.text();
+            await addToCache(url, data);
+            return data;
         } finally {
             clearTimeout(id);
+        }
+    };
+
+    const fetchAndDisplayImages = async (retryCount = 0) => {
+        if (appState.dataLoading || appState.panelActive) return;
+        appState.dataLoading = true;
+        toggleLoadingIndicator(true);
+        const url = `${settings.proxyEndpoint}${encodeURIComponent(settings.targetEndpoint)}`;
+        try {
+            let htmlContent = await getCachedData(url) || await fetchWithTimeout(url);
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+            extractImagesAndPdfLinks(doc);
+            if (appState.imageList.length > 0) {
+                await displayImages();
+                initializeIntersectionObserver();
+            }
+        } catch (error) {
+            await manageFetchError(error, retryCount);
+        } finally {
+            appState.dataLoading = false;
+            toggleLoadingIndicator(false);
         }
     };
 
@@ -74,27 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
             domElements.errorDisplay.textContent = message;
             domElements.errorDisplay.classList.add('active');
             setTimeout(() => domElements.errorDisplay.classList.remove('active'), settings.errorMessageDuration);
-        }
-    };
-
-    const fetchAndDisplayImages = async (retryCount = 0) => {
-        if (appState.dataLoading || appState.panelActive) return;
-        appState.dataLoading = true;
-        toggleLoadingIndicator(true);
-        try {
-            const htmlContent = await fetchWithTimeout(`${settings.proxyEndpoint}${encodeURIComponent(settings.targetEndpoint)}`);
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlContent, 'text/html');
-            extractImagesAndPdfLinks(doc);
-            if (appState.imageList.length > 0) {
-                await displayImages();
-                initializeIntersectionObserver();
-            }
-        } catch (error) {
-            manageFetchError(error, retryCount);
-        } finally {
-            appState.dataLoading = false;
-            toggleLoadingIndicator(false);
         }
     };
 
@@ -176,12 +238,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const manageFetchError = (error, retryCount) => {
+    const manageFetchError = async (error, retryCount) => {
         console.error('Fetch or parsing error:', error);
         displayErrorMessage('Failed to load books. Please try again later.');
         if (retryCount < settings.maxRetryAttempts) {
             console.log(`Retrying fetch (${retryCount + 1}/${settings.maxRetryAttempts})...`);
-            setTimeout(() => fetchAndDisplayImages(retryCount + 1), settings.retryInterval * (retryCount + 1));
+            await new Promise(resolve => setTimeout(resolve, settings.retryInterval * (retryCount + 1)));
+            return fetchAndDisplayImages(retryCount + 1);
         }
     };
 
@@ -279,24 +342,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     domElements.themeSwitcher.addEventListener('change', () => {
         document.body.classList.toggle('dark-theme');
-        localStorage.setItem('darkTheme', document.body.classList.contains('dark-theme'));
+        localStorage.setItem(settings.localStorageKeys.darkTheme, document.body.classList.contains('dark-theme'));
     });
 
     domElements.gridViewSizeSlider.addEventListener('input', (event) => {
         const size = event.target.value;
         document.body.classList.remove(...Array.from(document.body.classList).filter(cls => cls.startsWith('grid-size-')));
         document.body.classList.add(`grid-size-${size}`);
-        localStorage.setItem('gridSize', size);
+        localStorage.setItem(settings.localStorageKeys.gridSize, size);
     });
 
     const initializeApp = async () => {
-        const savedTheme = localStorage.getItem('darkTheme');
+        await initIndexedDB();
+        await clearCacheOnRefresh();
+
+        const savedTheme = localStorage.getItem(settings.localStorageKeys.darkTheme);
         if (savedTheme === 'true') {
             document.body.classList.add('dark-theme');
             domElements.themeSwitcher.checked = true;
         }
 
-        const savedGridSize = localStorage.getItem('gridSize');
+        const savedGridSize = localStorage.getItem(settings.localStorageKeys.gridSize);
         if (savedGridSize) {
             document.body.classList.add(`grid-size-${savedGridSize}`);
             domElements.gridViewSizeSlider.value = savedGridSize;
@@ -310,17 +376,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     initializeApp();
-
-    // Register Service Worker for offline support
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                })
-                .catch(error => {
-                    console.error('ServiceWorker registration failed: ', error);
-                });
-        });
-    }
 });
+
+// Utility functions
+function createElement(tag, attributes = {}, textContent = '') {
+    const element = document.createElement(tag);
+    Object.entries(attributes).forEach(([key, value]) => element.setAttribute(key, value));
+    if (textContent) element.textContent = textContent;
+    return element;
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
