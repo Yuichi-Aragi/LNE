@@ -494,8 +494,8 @@ a:focus, button:focus, input:focus {
 /* Image Error Message */
 .image-error {
     width: 100%;
-    height: 100%;
-    display: flex;
+    height: auto;
+    display: relative;
     align-items: center;
     justify-content: center;
     background-color: var(--secondary-color);
