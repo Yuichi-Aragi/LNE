@@ -61,12 +61,12 @@
             </ul>
         </nav>
     </aside>
-    
+
     <aside id="library-panel" class="panel" aria-hidden="true" role="complementary">
         <h3>Library</h3>
         <div id="library-content"></div>
     </aside>
-    
+
     <aside id="settings-panel" class="panel" aria-hidden="true" role="complementary">
         <h3>Settings</h3>
         <div class="settings-option">
@@ -100,6 +100,19 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js" async></script>
     <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js" defer></script>
     <script src="script.js" defer></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker registered with scope:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed:', error);
+                });
+        }
+    </script>
 </body>
 
 </html>

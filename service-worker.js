@@ -14,30 +14,57 @@ const urlsToCache = [
     'https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js'
 ];
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', async (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(urlsToCache))
+        (async () => {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.addAll(urlsToCache);
+        })()
     );
 });
 
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                if (response) return response;
-                return fetch(event.request).then((response) => {
-                    if (!response || response.status !== 200 || response.type !== 'basic') {
-                        return response;
+        (async () => {
+            const response = await caches.match(event.request);
+            if (response) {
+                // Return cached response
+                return response;
+            }
+
+            try {
+                // Fetch new data
+                const networkResponse = await fetch(event.request);
+                if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+                    return networkResponse;
+                }
+
+                // Cache the new data
+                const responseToCache = networkResponse.clone();
+                const cache = await caches.open(CACHE_NAME);
+                cache.put(event.request, responseToCache);
+
+                return networkResponse;
+            } catch (error) {
+                // If fetch fails, return offline page
+                return caches.match('/offline.html');
+            }
+        })()
+    );
+});
+
+self.addEventListener('activate', (event) => {
+    const cacheWhitelist = [CACHE_NAME];
+    event.waitUntil(
+        (async () => {
+            const cacheNames = await caches.keys();
+            await Promise.all(
+                cacheNames.map(cacheName => {
+                    if (!cacheWhitelist.includes(cacheName)) {
+                        return caches.delete(cacheName);
                     }
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseToCache);
-                    });
-                    return response;
-                }).catch(() => {
-                    return caches.match('/offline.html');
-                });
-            })
+                })
+            );
+        })()
     );
 });
