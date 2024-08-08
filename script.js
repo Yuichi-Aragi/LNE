@@ -46,19 +46,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize IndexedDB
   const initIndexedDB = async () => {
-    try {
-      db = await new Promise((resolve, reject) => {
-        const request = indexedDB.open('CacheDB', 1);
-        request.onerror = () => reject(new Error('Error opening IndexedDB'));
-        request.onsuccess = () => resolve(request.result);
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          db.createObjectStore('cachedData', { keyPath: 'url' });
-        };
-      });
-    } catch (error) {
-      handleError(error, 'Failed to initialize cache. Some features may not work properly.');
-    }
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('CacheDB', 1);
+      request.onerror = () => reject(new Error('Error opening IndexedDB'));
+      request.onsuccess = () => resolve(request.result);
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        db.createObjectStore('cachedData', { keyPath: 'url' });
+      };
+    }).then(result => db = result).catch(error => handleError(error, 'Failed to initialize cache. Some features may not work properly.'));
   };
 
   // Add data to cache
@@ -66,7 +62,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!db) return;
     const transaction = db.transaction('cachedData', 'readwrite');
     const store = transaction.objectStore('cachedData');
-    await store.put({ url, data, timestamp: Date.now() });
+    store.put({ url, data, timestamp: Date.now() });
+    await transaction.complete;
     await manageCacheSize(store);
   };
 
@@ -133,16 +130,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // Fetch and display images
+  // Fetch and display images from cache
   const fetchAndDisplayImages = async (retryCount = 0) => {
     if (appState.dataLoading || appState.panelActive) return;
     appState.dataLoading = true;
     toggleLoadingIndicator(true);
     const url = `${settings.proxyEndpoint}${encodeURIComponent(settings.targetEndpoint)}`;
     try {
-      let htmlContent = await getCachedData(url) || await fetchWithTimeout(url);
+      let htmlContent = await getCachedData(url);
+      if (!htmlContent) {
+        htmlContent = await fetchWithTimeout(url);
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlContent, 'text/html');
+        await addToCache(settings.targetEndpoint, doc.documentElement.outerHTML);
+      }
+      const cachedHtml = await getCachedData(settings.targetEndpoint);
       const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlContent, 'text/html');
+      const doc = parser.parseFromString(cachedHtml, 'text/html');
       extractImagesAndPdfLinks(doc);
       if (appState.imageList.length > 0) {
         await displayImages();
@@ -205,10 +209,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   // Create a grid item for an image
-const createGridItem = async (img) => {
+  const createGridItem = async (img) => {
     const gridItem = createElement('div', { class: 'grid-item', 'data-aos': 'fade-up' });
     const imgElement = new Image();
-    imgElement.src = img.src;
+    imgElement.src = img.src; // Initially set the source
     imgElement.className = 'lazyload';
     imgElement.alt = 'Book Cover';
 
@@ -217,28 +221,28 @@ const createGridItem = async (img) => {
     const maxRetries = 2;
 
     const loadImage = () => {
-        return new Promise((resolve, reject) => {
-            imgElement.onload = resolve;
-            imgElement.onerror = reject;
-        });
+      return new Promise((resolve, reject) => {
+        imgElement.onload = resolve;
+        imgElement.onerror = reject;
+      });
     };
 
     const attemptLoad = async () => {
-        try {
-            await loadImage();
-            imgElement.style.display = 'block';
-        } catch (error) {
-            if (retries < maxRetries) {
-                retries += 1;
-                imgElement.src = img.src; // Retry loading the image
-                await attemptLoad();
-            } else {
-                // If all retries fail, display an error message
-                const errorMessage = createElement('div', { class: 'image-error' }, 'Image not available');
-                errorMessage.style.display = 'block';
-                gridItem.appendChild(errorMessage);
-            }
+      try {
+        await loadImage();
+        imgElement.style.display = 'block';
+      } catch (error) {
+        if (retries < maxRetries) {
+          retries += 1;
+          imgElement.src = img.src; // Retry loading the image
+          await attemptLoad();
+        } else {
+          // If all retries fail, display an error message
+          const errorMessage = createElement('div', { class: 'image-error' }, 'Image not available');
+          errorMessage.style.display = 'block';
+          gridItem.appendChild(errorMessage);
         }
+      }
     };
 
     await attemptLoad();
@@ -247,15 +251,15 @@ const createGridItem = async (img) => {
 
     const anchorElement = img.closest('a');
     if (anchorElement?.href) {
-        imgElement.addEventListener('click', () => window.open(anchorElement.href, '_blank'));
-        const texts = appState.pdfTextMap.get(anchorElement.href);
-        if (texts?.length) {
-            const textElement = createElement('p', { class: 'textElement' }, texts.join(', '));
-            gridItem.appendChild(textElement);
-        }
+      imgElement.addEventListener('click', () => window.open(anchorElement.href, '_blank'));
+      const texts = appState.pdfTextMap.get(anchorElement.href);
+      if (texts?.length) {
+        const textElement = createElement('p', { class: 'textElement' }, texts.join(', '));
+        gridItem.appendChild(textElement);
+      }
     }
     return gridItem;
-};
+  };
 
   // Initialize Intersection Observer for lazy loading
   const initializeIntersectionObserver = () => {
@@ -394,10 +398,41 @@ const createGridItem = async (img) => {
     localStorage.setItem(settings.localStorageKeys.gridSize, size);
   }, { passive: true });
 
+  // Check for fresh PDF, image, and text links
+  const checkFreshness = async () => {
+    // Check PDF links
+    for (const [pdfUrl, texts] of appState.pdfTextMap.entries()) {
+      try {
+        const response = await fetch(pdfUrl, { method: 'HEAD' });
+        if (!response.ok) {
+          appState.pdfTextMap.delete(pdfUrl); // Remove stale links
+          console.log(`Removed stale PDF link: ${pdfUrl}`);
+        }
+      } catch (error) {
+        console.error('Error checking PDF link:', error);
+      }
+    }
+
+    // Check image and text elements
+    for (const img of appState.imageList) {
+      try {
+        const response = await fetch(img.src, { method: 'HEAD' });
+        if (!response.ok) {
+          appState.imageList = appState.imageList.filter(image => image.src !== img.src);
+          appState.loadedImageSet.delete(img.src); // Remove stale images
+          console.log(`Removed stale image: ${img.src}`);
+        }
+      } catch (error) {
+        console.error('Error checking image link:', error);
+      }
+    }
+  };
+
   // Initialize the application
   const initializeApp = async () => {
     await initIndexedDB();
     await clearCacheOnRefresh();
+    await checkFreshness(); // Check freshness of PDFs, images, and text elements during initialization
     const savedTheme = localStorage.getItem(settings.localStorageKeys.darkTheme);
     if (savedTheme === 'true') {
       document.body.classList.add('dark-theme');
@@ -425,7 +460,7 @@ const createElement = (tag, attributes = {}, textContent = '') => {
   return element;
 };
 
-// Debounce function to limit the rate of function calls
+// Debounce function to limit the
 const debounce = (func, wait) => {
   let timeout;
   return function executedFunction(...args) {
@@ -442,5 +477,5 @@ const debounce = (func, wait) => {
 const sanitizeInput = (input) => {
   const tempDiv = document.createElement('div');
   tempDiv.textContent = input; // Escape HTML
-  return tempDiv.innerHTML; // Return sanitized input
+  return tempDiv.innerHTML; // Return sanitized
 };
