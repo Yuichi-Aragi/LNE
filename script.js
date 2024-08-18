@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const config = {
         proxyUrl: 'https://api.allorigins.win/raw?url=',
         targetUrl: 'https://jnovels.com/top-light-novels-to-read/',
-        batchSize: 40,
+        batchSize: 60,
         maxRetries: 3,
         retryDelay: 1000,
         searchDebounceTime: 300,
@@ -55,8 +55,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const showLoadingSpinner = () => elements.loadingSpinner?.classList.add('active');
-    const hideLoadingSpinner = () => elements.loadingSpinner?.classList.remove('active');
+    const toggleLoadingSpinner = (isLoading) => {
+        if (elements.loadingSpinner) {
+            elements.loadingSpinner.classList.toggle('active', isLoading);
+        }
+    };
 
     const showErrorMessage = (message) => {
         if (elements.errorMessage) {
@@ -69,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchAndLoadImages = async () => {
         if (state.isLoading || state.isPanelOpen) return;
         state.isLoading = true;
-        showLoadingSpinner();
+        toggleLoadingSpinner(true);
         try {
             const html = await fetchWithTimeout(`${config.proxyUrl}${encodeURIComponent(config.targetUrl)}`);
             const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -83,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showErrorMessage('Failed to fetch books. Please try again later.');
         } finally {
             state.isLoading = false;
-            hideLoadingSpinner();
+            toggleLoadingSpinner(false);
         }
     };
 
@@ -111,16 +114,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const batch = state.images.slice(start, end);
         const fragment = document.createDocumentFragment();
         await Promise.all(batch.map(img => createGridItem(img).then(gridItem => fragment.appendChild(gridItem))));
-        elements.bookGrid?.appendChild(fragment);
+        elements.bookGrid.appendChild(fragment);
         state.currentBatch++;
     };
 
     const createGridItem = async (img, retryCount = 0) => {
         const gridItem = createElement('div', { class: 'grid-item', 'data-aos': 'fade-up' });
-        const imgElement = new Image();
-        imgElement.src = img.src;
-        imgElement.className = 'lazyload';
-        imgElement.alt = 'Book Cover';
+        const imgElement = createElement('img', { class: 'lazyload', alt: 'Book Cover', 'data-src': img.src });
+
         imgElement.onload = () => imgElement.style.display = 'block';
         imgElement.onerror = async () => {
             if (retryCount < config.maxRetries) {
@@ -129,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(`Failed to load image after ${config.maxRetries} retries:`, img.src);
             }
         };
+
         gridItem.appendChild(imgElement);
 
         const aElement = img.closest('a');
@@ -136,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
             imgElement.addEventListener('click', () => window.open(aElement.href, '_blank'));
             const texts = state.pdfUrlToTextMap.get(aElement.href);
             if (texts?.length) {
-                const textElement = createElement('p', { class: 'textElement' }, texts.join(', '));
+                const textElement = createElement('p', { class: 'textElement', 'data-src': texts.join(', ') });
                 gridItem.appendChild(textElement);
             }
         }
@@ -146,15 +148,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const setupIntersectionObserver = () => {
         if (!elements.bookGrid) return;
         const observer = new IntersectionObserver((entries) => {
-            if (!state.isPanelOpen && entries.some(entry => entry.isIntersecting) && state.currentBatch * config.batchSize < state.images.length) {
-                loadImages();
-            }
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const imgElement = entry.target.querySelector('img.lazyload');
+                    if (imgElement) {
+                        imgElement.src = imgElement.dataset.src; // Set the src attribute to start loading the image
+                    }
+
+                    const textElement = entry.target.querySelector('.textElement[data-src]');
+                    if (textElement) {
+                        textElement.textContent = textElement.dataset.src; // Set the text content to load the PDF text
+                    }
+
+                    observer.unobserve(entry.target); // Stop observing after loading
+                }
+            });
         }, { rootMargin: config.intersectionObserverRootMargin, threshold: config.intersectionObserverThreshold });
 
-        const lastGridItem = elements.bookGrid.lastElementChild;
-        if (lastGridItem) {
-            observer.observe(lastGridItem);
-        }
+        const gridItems = elements.bookGrid.querySelectorAll('.grid-item');
+        gridItems.forEach(item => observer.observe(item));
     };
 
     const redirectSearchResults = (query) => {
@@ -164,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const performSearch = (event) => {
         event.preventDefault();
-        const query = elements.searchInput?.value.trim();
+        const query = elements.searchInput.value.trim();
         if (query) {
             redirectSearchResults(query);
         }
@@ -177,32 +189,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    elements.searchInput?.addEventListener('keydown', (event) => {
+    const handleSearchInput = (event) => {
         if (event.key === 'Enter') {
             performSearch(event);
         }
-    });
-    elements.searchButton?.addEventListener('click', performSearch);
-    elements.menuBtn?.addEventListener('click', () => togglePanel(elements.menuPanel));
+    };
+
+    elements.searchInput.addEventListener('keydown', handleSearchInput);
+    elements.searchButton.addEventListener('click', performSearch);
+    elements.menuBtn.addEventListener('click', () => togglePanel(elements.menuPanel));
     
-    document.getElementById('library-link')?.addEventListener('click', () => {
-        elements.menuPanel?.classList.remove('active');
+    document.getElementById('library-link').addEventListener('click', () => {
+        elements.menuPanel.classList.remove('active');
         togglePanel(elements.libraryPanel);
     });
     
-    document.getElementById('settings-link')?.addEventListener('click', () => {
-        elements.menuPanel?.classList.remove('active');
+    document.getElementById('settings-link').addEventListener('click', () => {
+        elements.menuPanel.classList.remove('active');
         togglePanel(elements.settingsPanel);
     });
     
     document.addEventListener('click', (event) => {
         if (!event.target.closest('.panel') && !event.target.closest('.menu-btn')) {
-            [elements.menuPanel, elements.libraryPanel, elements.settingsPanel].forEach(panel => panel?.classList.remove('active'));
+            [elements.menuPanel, elements.libraryPanel, elements.settingsPanel].forEach(panel => panel.classList.remove('active'));
             state.isPanelOpen = false;
         }
     });
     
-    elements.themeToggle?.addEventListener('change', () => {
+    elements.themeToggle.addEventListener('change', () => {
         document.body.classList.toggle('dark-theme');
         localStorage.setItem('darkTheme', document.body.classList.contains('dark-theme'));
     });
