@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap');
 
-/* Root Variables */
 :root {
     --primary-color: #333;
     --secondary-color: #f5f5f5;
@@ -9,23 +8,33 @@
     --shadow-color: rgba(0, 0, 0, 0.1);
     --hover-color: #666;
     --transition-speed: 0.3s;
-    --focus-outline: 2px solid #2196F3;
 }
 
-/* Global Styles */
-html, body {
+.dark-theme {
+    --primary-color: #f5f5f5;
+    --secondary-color: #333;
+    --text-color: #f5f5f5;
+    --background-color: #222;
+    --shadow-color: rgba(255, 255, 255, 0.1);
+    --hover-color: #ddd;
+}
+
+html {
     scroll-behavior: smooth;
     font-family: 'Montserrat', sans-serif;
     margin: 0;
     padding: 0;
     overflow-x: hidden;
-    transition: background-color var(--transition-speed), color var(--transition-speed);
-    background-color: var(--background-color);
-    color: var(--text-color);
-    font-display: swap;
 }
 
-/* Header */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+
 header {
     position: fixed;
     top: 0;
@@ -39,26 +48,20 @@ header {
     align-items: center;
     z-index: 100;
     box-shadow: 0 2px 5px var(--shadow-color);
-    will-change: transform;
 }
 
-/* Buttons */
-/* Menu Button */
 .menu-btn {
     background-color: transparent;
     border: none;
     cursor: pointer;
-    width: 90px;
-    height: 90px;
+    width: 40px;
+    height: 40px;
     position: fixed;
-    top: -16px;
-    right: -20px;
+    top: 8px;
+    right: 25px;
     border-radius: 50%;
     z-index: 102;
-    transition: background-color var(--transition-speed), transform var(--transition-speed);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    transition: transform var(--transition-speed);
 }
 
 .menu-btn:hover {
@@ -68,22 +71,12 @@ header {
 .menu-icon {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    width: 28px;
-    height: 23px;
+    justify-content: center;
+    align-items: center;
+    width: 32px;
+    height: 32px;
 }
 
-.bar {
-    height: 4px;
-    background-color: var(--secondary-color);
-    transition: background-color var(--transition-speed);
-}
-
-.menu-btn:hover .bar {
-    background-color: var(--primary-color);
-}
-
-/* Search Bar */
 .search-bar {
     display: flex;
     align-items: center;
@@ -105,7 +98,7 @@ header {
     background-color: transparent;
     font-size: 16px;
     outline: none;
-    padding: 0 10px;
+    padding: 0;
     color: var(--text-color);
 }
 
@@ -128,8 +121,9 @@ header {
 }
 
 .search-btn svg {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
+    stroke: var(--text-color);
     transition: stroke var(--transition-speed);
 }
 
@@ -137,7 +131,6 @@ header {
     stroke: var(--hover-color);
 }
 
-/* Main Content */
 main {
     display: flex;
     justify-content: center;
@@ -147,7 +140,6 @@ main {
     margin-top: 60px;
 }
 
-/* Book Grid */
 .book-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -155,42 +147,16 @@ main {
     padding: 20px;
     width: 100%;
     max-width: 1200px;
-    margin: 0 auto;
 }
 
-/* Grid Size Classes */
-.grid-size-1 .grid-item {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-}
-
-.grid-size-2 .grid-item {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
-.grid-size-3 .grid-item {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-}
-
-/* Skeleton Loader */
-.skeleton {
-    background: #e0e0e0;
-    border-radius: 10px;
-    animation: pulse 1.5s infinite;
-    height: 300px; /* Adjust height for skeleton items */
-}
-
-/* Grid Item */
 .grid-item {
     position: relative;
     background-color: var(--secondary-color);
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 5px var(--shadow-color);
     cursor: pointer;
     transition: transform var(--transition-speed), box-shadow var(--transition-speed);
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .grid-item img {
@@ -202,35 +168,32 @@ main {
 
 .grid-item:hover {
     transform: scale(1.05);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 10px var(--shadow-color);
 }
 
 .grid-item:hover img {
     transform: scale(1.1);
 }
 
-/* Text Overlay */
 .textElement {
     position: absolute;
-    bottom: -2px;
-    left: -10px;
+    bottom: 0;
+    left: 0;
     width: 100%;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.6);
+    padding: 5px;
+    background-color: rgba(0, 0, 0, 0.7);
     color: white;
     font-family: 'Playfair Display';
     font-size: 15px;
     text-align: center;
+    opacity: 0.8;
     transition: opacity var(--transition-speed);
-    opacity: 1;
-    z-index: 2;
 }
 
 .grid-item:hover .textElement {
     opacity: 1;
 }
 
-/* Panels */
 .panel {
     position: fixed;
     top: 0;
@@ -285,19 +248,26 @@ main {
     right: 0;
 }
 
-/* Error and Loading */
+.loading-spinner {
+    display: none;
+}
+
+.loading-spinner.active {
+    display: block;
+}
+
 .error-message {
     position: fixed;
-    bottom: 20px;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: #f44336;
+    background-color: #ff4d4d;
     color: white;
-    padding: 10px 20px;
+    padding: 10px;
     border-radius: 5px;
-    font-size: 14px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    z-index: 200;
     display: none;
-    z-index: 101;
 }
 
 .error-message.active {
@@ -319,10 +289,6 @@ main {
     z-index: 103;
 }
 
-.loading-spinner.active {
-    display: block;
-}
-
 @keyframes spin {
     0% { transform: translate(-50%, -50%) rotate(0deg); }
     100% { transform: translate(-50%, -50%) rotate(360deg); }
@@ -341,17 +307,6 @@ main {
     font-size: 16px;
 }
 
-/* Dark Theme Variables */
-.dark-theme {
-    --primary-color: #f5f5f5;
-    --secondary-color: #333;
-    --text-color: #f5f5f5;
-    --background-color: #222;
-    --shadow-color: rgba(255, 255, 255, 0.1);
-    --hover-color: #ddd;
-}
-
-/* Toggle Switch Styles */
 .toggle-switch {
     position: relative;
     display: inline-block;
@@ -365,7 +320,7 @@ main {
     height: 0;
 }
 
-.toggle-switch .slider {
+.slider {
     position: absolute;
     cursor: pointer;
     top: 0;
@@ -373,11 +328,11 @@ main {
     right: 0;
     bottom: 0;
     background-color: #ccc;
-    transition: background-color 0.4s;
+    transition: background-color .4s;
     border-radius: 34px;
 }
 
-.toggle-switch .slider:before {
+.slider:before {
     position: absolute;
     content: "";
     height: 26px;
@@ -385,7 +340,7 @@ main {
     left: 4px;
     bottom: 4px;
     background-color: white;
-    transition: transform 0.4s;
+    transition: transform .4s;
     border-radius: 50%;
 }
 
@@ -435,12 +390,6 @@ input[type="range"]::-webkit-slider-runnable-track {
 }
 
 /* Animations */
-@keyframes pulse {
-    0% { background-color: #e0e0e0; }
-    50% { background-color: #f5f5f5; }
-    100% { background-color: #e0e0e0; }
-}
-
 @keyframes fadeIn {
     0% { opacity: 0; }
     100% { opacity: 1; }
@@ -460,7 +409,8 @@ input[type="range"]::-webkit-slider-runnable-track {
     animation: slideUp var(--transition-speed) ease-in-out;
 }
 
-.search-bar, .menu-btn {
+.search-bar,
+.menu-btn {
     animation: scaleIn var(--transition-speed) ease-in-out;
 }
 
@@ -469,7 +419,6 @@ input[type="range"]::-webkit-slider-runnable-track {
     .book-grid {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
-
     .grid-item {
         max-width: 220px;
         max-height: 330px;
@@ -480,29 +429,8 @@ input[type="range"]::-webkit-slider-runnable-track {
     .book-grid {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
-
     .grid-item {
         max-width: 180px;
         max-height: 270px;
     }
-}
-
-/* Focus Styles for Accessibility */
-a:focus, button:focus, input:focus {
-    outline: var(--focus-outline);
-}
-/* Image Error Message */
-.image-error {
-    width: 100%;
-    height: auto;
-    display: relative;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--secondary-color);
-    color: var(--text-color);
-    font-size: 14px;
-    text-align: center;
-    padding: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
 }
