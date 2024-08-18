@@ -54,13 +54,14 @@ header {
     background-color: transparent;
     border: none;
     cursor: pointer;
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     position: fixed;
-    top: 8px;
-    right: 25px;
+    top: 3px;
+    right: 23px;
     border-radius: 50%;
     z-index: 102;
+    color: white;
     transition: transform var(--transition-speed);
 }
 
@@ -73,8 +74,8 @@ header {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 32px;
-    height: 32px;
+    width: 50px;
+    height: 50px;
 }
 
 .search-bar {
