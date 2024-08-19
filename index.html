@@ -4,19 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Top Light Novels</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Preloading fonts for better performance -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript>
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    </noscript>
+    
+    <!-- Preloading stylesheet for faster rendering -->
+    <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript>
+        <link rel="stylesheet" href="styles.css">
+    </noscript>
+
+    <!-- Deferring script for non-blocking loading -->
     <script src="script.js" defer></script>
-</head>-
+</head>
 <body>
     <header>
         <button class="menu-btn" aria-label="Open Menu">
             <ion-icon name="menu-outline" class="menu-icon"></ion-icon>
         </button>
         <div class="search-bar">
-            <input type="text" id="search-input" class="search-input" placeholder="Search..." aria-label="Search Novels">
+            <input type="text" id="search-input" class="search-input" placeholder="Search..." aria-label="Search Novels" autocomplete="off">
             <button id="search-button" class="search-btn" aria-label="Search">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l-4-4m0 0l4-4m-4 4h16" />
@@ -27,24 +37,25 @@
     <main>
         <div id="book-grid" class="book-grid" role="grid" aria-label="Top Light Novels Grid"></div>
     </main>
-    <div id="menu-panel" class="panel" aria-hidden="true">
+    <aside id="menu-panel" class="panel" aria-hidden="true">
         <h3>Menu</h3>
         <ul>
             <li><a href="#" id="library-link">Library</a></li>
             <li><a href="#" id="settings-link">Settings</a></li>
         </ul>
-    </div>
-    <div id="library-panel" class="panel" aria-hidden="true">
+    </aside>
+    <aside id="library-panel" class="panel" aria-hidden="true">
         <h3>Library</h3>
-        <!-- Additional content can go here -->
-    </div>
-    <div id="settings-panel" class="panel" aria-hidden="true">
+    </aside>
+    <aside id="settings-panel" class="panel" aria-hidden="true">
         <h3>Settings</h3>
         <label for="theme-toggle">Dark Theme</label>
         <input type="checkbox" id="theme-toggle">
-    </div>
+    </aside>
     <div id="loading-spinner" class="loading-spinner" aria-hidden="true"></div>
     <div id="error-message" class="error-message" role="alert"></div>
+
+    <!-- Async loading of external script for non-blocking rendering -->
     <script src="https://unpkg.com/@ionic/core@latest/dist/ionic/ionic.js" async></script>
 </body>
 </html>
