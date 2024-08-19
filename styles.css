@@ -48,33 +48,52 @@ header {
     align-items: center;
     z-index: 100;
     box-shadow: 0 2px 5px var(--shadow-color);
+    transition: background-color var(--transition-speed);
 }
 
+* Menu Button */
 .menu-btn {
     background-color: transparent;
     border: none;
     cursor: pointer;
-    width: 40px;
-    height: 40px;
+    width: 90px;
+    height: 90px;
     position: fixed;
-    top: 8px;
-    right: 25px;
-    border-radius: 50%;
+    top: -16px;
+    right: -10px;
+    border-radius: 0%;
     z-index: 102;
-    transition: transform var(--transition-speed);
+    transition: background-color var(--transition-speed), transform var(--transition-speed);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
 }
 
 .menu-btn:hover {
     transform: scale(1.1);
 }
 
+/* Menu Icon */
 .menu-icon {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 32px;
-    height: 32px;
+    justify-content: space-between;
+    width: 28px;
+    height: 28px;
+}
+
+/* Menu Bars */
+.bar {
+    height: 28px;
+    background-color: var(--secondary-color);
+    border-radius: 0px;
+    transition: background-color var(--transition-speed);
+}
+
+/* Change color of bars on hover */
+.menu-btn:hover .bar {
+    background-color: var(--primary-color);
 }
 
 .search-bar {
@@ -143,7 +162,7 @@ main {
 .book-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    grid-gap: 20px;
+    gap: 20px;
     padding: 20px;
     width: 100%;
     max-width: 1200px;
@@ -161,7 +180,7 @@ main {
 
 .grid-item img {
     width: 100%;
-    height: auto;
+    height: 100%; auto;
     border-radius: 10px;
     transition: transform var(--transition-speed);
 }
@@ -180,10 +199,10 @@ main {
     bottom: 0;
     left: 0;
     width: 100%;
-    padding: 5px;
+    padding: 0px;
     background-color: rgba(0, 0, 0, 0.7);
     color: white;
-    font-family: 'Playfair Display';
+    font-family: 'Playfair Display', serif;
     font-size: 15px;
     text-align: center;
     opacity: 0.8;
@@ -248,30 +267,14 @@ main {
     right: 0;
 }
 
-.loading-spinner {
-    display: none;
-}
-
-.loading-spinner.active {
-    display: block;
-}
-
-.error-message {
-    position: fixed;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #ff4d4d;
-    color: white;
-    padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px var(--shadow-color);
-    z-index: 200;
-    display: none;
-}
-
+.loading-spinner.active,
 .error-message.active {
     display: block;
+}
+
+.loading-spinner,
+.error-message {
+    display: none;
 }
 
 .loading-spinner {
@@ -285,7 +288,6 @@ main {
     border-top: 5px solid var(--primary-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    display: none;
     z-index: 103;
 }
 
@@ -294,7 +296,19 @@ main {
     100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-/* Settings and Sliders */
+.error-message {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ff4d4d;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px var(--shadow-color);
+    z-index: 200;
+}
+
 .settings-option {
     margin-bottom: 20px;
     width: 100%;
@@ -389,7 +403,6 @@ input[type="range"]::-webkit-slider-runnable-track {
     border-radius: 3px;
 }
 
-/* Animations */
 @keyframes fadeIn {
     0% { opacity: 0; }
     100% { opacity: 1; }
@@ -414,7 +427,6 @@ input[type="range"]::-webkit-slider-runnable-track {
     animation: scaleIn var(--transition-speed) ease-in-out;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
     .book-grid {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
