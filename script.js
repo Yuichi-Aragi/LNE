@@ -242,5 +242,11 @@ document.addEventListener('DOMContentLoaded', () => {
         await fetchAndCacheHtml();
     };
 
+    window.addEventListener('beforeunload', () => {
+        state.cachedHtml = null;
+        state.loadedImages.clear();
+        state.pdfUrlToTextMap.clear();
+    });
+
     init();
 });
