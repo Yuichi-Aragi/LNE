@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
         maxRetries: 3,
         retryDelay: 1000,
         errorMessageDisplayTime: 5000,
-        fetchTimeout: 10000,
+        fetchTimeout: 10000
     };
 
     const elements = {
@@ -13,11 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
         searchInput: document.getElementById('search-input'),
         searchButton: document.getElementById('search-button'),
         loadingSpinner: document.getElementById('loading-spinner'),
-        errorMessage: document.getElementById('error-message'),
+        errorMessage: document.getElementById('error-message')
     };
-
+    
     const state = {
-        searchInProgress: false,
+        searchInProgress: false
     };
 
     const createElement = (type, attributes = {}, ...children) => {
@@ -48,11 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.errorMessage) {
             elements.errorMessage.textContent = message;
             elements.errorMessage.classList.add('active');
-            elements.errorMessage.setAttribute('aria-hidden', 'false');
-            setTimeout(() => {
-                elements.errorMessage.classList.remove('active');
-                elements.errorMessage.setAttribute('aria-hidden', 'true');
-            }, config.errorMessageDisplayTime);
+            setTimeout(() => elements.errorMessage.classList.remove('active'), config.errorMessageDisplayTime);
         }
     };
 
@@ -68,17 +64,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (state.searchInProgress) return;
         state.searchInProgress = true;
-
         const searchUrl = `https://jnovels.com/?s=${encodeURIComponent(query)}`;
         const searchProxyUrl = `${config.proxyUrl}${encodeURIComponent(searchUrl)}`;
         elements.resultsGrid.innerHTML = '';
         showLoadingSpinner();
-
         try {
             const html = await fetchWithTimeout(searchProxyUrl);
             const doc = new DOMParser().parseFromString(html, 'text/html');
             const items = doc.querySelectorAll('a[rel="bookmark"]');
-
             if (items.length === 0) {
                 elements.resultsGrid.innerHTML = '<p>No results found.</p>';
             } else {
@@ -89,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         fragment.appendChild(gridItem);
                     }
                 });
-                elements.resultsGrid.appendChild(fragment);
+                elements.resultsGrid?.appendChild(fragment);
             }
         } catch (error) {
             console.error('Error during fetching or parsing:', error);
@@ -109,26 +102,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const img = item.querySelector('img');
         const title = item.getAttribute('title');
         const href = item.getAttribute('href');
-
         if (img && title && href) {
             const div = createElement('div', { class: 'grid-item' });
             const a = createElement('a', { href, target: '_blank', class: 'grid-item-link' });
-            const imgElement = createElement('img', { src: img.src, alt: title, loading: 'lazy' });
-
+            const imgElement = createElement('img', { src: img.src, alt: title });
             imgElement.onload = () => imgElement.style.display = 'block';
             imgElement.onerror = async () => {
                 if (retryCount < config.maxRetries) {
-                    setTimeout(() => {
-                        const newItem = createSearchResultItem(item, retryCount + 1);
-                        if (newItem) {
-                            div.replaceWith(newItem);
-                        }
-                    }, config.retryDelay);
+                    setTimeout(() => createSearchResultItem(item, retryCount + 1), config.retryDelay);
                 } else {
                     console.error(`Failed to load image after ${config.maxRetries} retries:`, img.src);
                 }
             };
-
             const titleElement = createElement('div', { class: 'textElement' }, title);
             a.append(imgElement, titleElement);
             div.appendChild(a);
@@ -145,14 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const debounce = (func, delay) => {
-        let timeoutId;
-        return (...args) => {
-            if (timeoutId) clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => func(...args), delay);
-        };
-    };
-
     const init = async () => {
         const query = getQueryParam('query');
         if (query) {
@@ -165,9 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 performSearch(event);
             }
         });
-
-        const debouncedSearch = debounce(performSearch, config.searchDebounceTime);
-        elements.searchButton?.addEventListener('click', debouncedSearch);
+        elements.searchButton?.addEventListener('click', performSearch);
     };
 
     init();

@@ -2,27 +2,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const config = {
         proxyUrl: 'https://api.allorigins.win/raw?url=',
         targetUrl: 'https://jnovels.com/top-light-novels-to-read/',
-        batchSize: 60,
+        batchSize: 40,
         maxRetries: 3,
         retryDelay: 1000,
         searchDebounceTime: 300,
         intersectionObserverThreshold: 0.1,
         intersectionObserverRootMargin: '200px',
         errorMessageDisplayTime: 5000,
-        fetchTimeout: 10000,
+        fetchTimeout: 10000
     };
 
     const elements = {
         bookGrid: document.getElementById('book-grid'),
         searchInput: document.getElementById('search-input'),
         searchButton: document.getElementById('search-button'),
-        loadingSpinner: document.getElementById('loading-spinner'),
+        loadingSpinner: document.querySelector('.loading-spinner'),
         menuBtn: document.querySelector('.menu-btn'),
         menuPanel: document.getElementById('menu-panel'),
         libraryPanel: document.getElementById('library-panel'),
         settingsPanel: document.getElementById('settings-panel'),
         themeToggle: document.getElementById('theme-toggle'),
-        errorMessage: document.getElementById('error-message'),
+        errorMessage: document.getElementById('error-message')
     };
 
     const state = {
@@ -55,29 +55,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const toggleLoadingSpinner = (isLoading) => {
-        if (elements.loadingSpinner) {
-            elements.loadingSpinner.classList.toggle('active', isLoading);
-            elements.loadingSpinner.setAttribute('aria-hidden', !isLoading);
-        }
-    };
+    const showLoadingSpinner = () => elements.loadingSpinner?.classList.add('active');
+    const hideLoadingSpinner = () => elements.loadingSpinner?.classList.remove('active');
 
     const showErrorMessage = (message) => {
         if (elements.errorMessage) {
             elements.errorMessage.textContent = message;
             elements.errorMessage.classList.add('active');
-            elements.errorMessage.setAttribute('aria-hidden', 'false');
-            setTimeout(() => {
-                elements.errorMessage.classList.remove('active');
-                elements.errorMessage.setAttribute('aria-hidden', 'true');
-            }, config.errorMessageDisplayTime);
+            setTimeout(() => elements.errorMessage.classList.remove('active'), config.errorMessageDisplayTime);
         }
     };
 
     const fetchAndLoadImages = async () => {
         if (state.isLoading || state.isPanelOpen) return;
         state.isLoading = true;
-        toggleLoadingSpinner(true);
+        showLoadingSpinner();
         try {
             const html = await fetchWithTimeout(`${config.proxyUrl}${encodeURIComponent(config.targetUrl)}`);
             const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -91,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showErrorMessage('Failed to fetch books. Please try again later.');
         } finally {
             state.isLoading = false;
-            toggleLoadingSpinner(false);
+            hideLoadingSpinner();
         }
     };
 
@@ -99,24 +91,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const newImages = Array.from(doc.querySelectorAll('img[loading="lazy"][decoding="async"].alignnone'));
         const pdfLinks = doc.querySelectorAll('h3 > a');
 
-        const mapUpdates = new Map();
         pdfLinks.forEach(link => {
             const pdfUrl = link.href.trim();
             const textSpan = link.querySelector('span[style="color: #ff6600;"]');
             const text = textSpan ? textSpan.textContent.trim() : link.textContent.trim();
 
             if (pdfUrl && text) {
-                if (!mapUpdates.has(pdfUrl)) {
-                    mapUpdates.set(pdfUrl, new Set());
-                }
-                mapUpdates.get(pdfUrl).add(text);
+                state.pdfUrlToTextMap.set(pdfUrl, (state.pdfUrlToTextMap.get(pdfUrl) || []).concat(text));
             }
-        });
-
-        mapUpdates.forEach((texts, pdfUrl) => {
-            const currentTexts = state.pdfUrlToTextMap.get(pdfUrl) || new Set();
-            texts.forEach(text => currentTexts.add(text));
-            state.pdfUrlToTextMap.set(pdfUrl, Array.from(currentTexts));
         });
 
         state.images = newImages.filter(img => !state.loadedImages.has(img.src));
@@ -129,14 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const batch = state.images.slice(start, end);
         const fragment = document.createDocumentFragment();
         await Promise.all(batch.map(img => createGridItem(img).then(gridItem => fragment.appendChild(gridItem))));
-        elements.bookGrid.appendChild(fragment);
+        elements.bookGrid?.appendChild(fragment);
         state.currentBatch++;
     };
 
     const createGridItem = async (img, retryCount = 0) => {
         const gridItem = createElement('div', { class: 'grid-item', 'data-aos': 'fade-up' });
-        const imgElement = createElement('img', { class: 'lazyload', alt: 'Book Cover', 'data-src': img.src });
-
+        const imgElement = new Image();
+        imgElement.src = img.src;
+        imgElement.className = 'lazyload';
+        imgElement.alt = 'Book Cover';
         imgElement.onload = () => imgElement.style.display = 'block';
         imgElement.onerror = async () => {
             if (retryCount < config.maxRetries) {
@@ -145,7 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(`Failed to load image after ${config.maxRetries} retries:`, img.src);
             }
         };
-
         gridItem.appendChild(imgElement);
 
         const aElement = img.closest('a');
@@ -153,11 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
             imgElement.addEventListener('click', () => window.open(aElement.href, '_blank'));
             const texts = state.pdfUrlToTextMap.get(aElement.href);
             if (texts?.length) {
-                const textElement = createElement('p', { class: 'textElement', 'data-src': texts.join(', ') });
+                const textElement = createElement('p', { class: 'textElement' }, texts.join(', '));
                 gridItem.appendChild(textElement);
-
-                const linkElement = createElement('a', { 'data-pdf-url': aElement.href, href: '#', class: 'hidden-link' });
-                gridItem.appendChild(linkElement);
             }
         }
         return gridItem;
@@ -166,30 +146,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const setupIntersectionObserver = () => {
         if (!elements.bookGrid) return;
         const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const imgElement = entry.target.querySelector('img.lazyload');
-                    if (imgElement) {
-                        imgElement.src = imgElement.dataset.src; // Set the src attribute to start loading the image
-                    }
-
-                    const textElement = entry.target.querySelector('.textElement[data-src]');
-                    if (textElement) {
-                        textElement.textContent = textElement.dataset.src; // Set the text content to load the PDF text
-                    }
-
-                    const linkElement = entry.target.querySelector('a[data-pdf-url]');
-                    if (linkElement) {
-                        linkElement.href = linkElement.dataset.pdfUrl; // Set the href attribute to load the PDF URL
-                    }
-
-                    observer.unobserve(entry.target); // Stop observing after loading
-                }
-            });
+            if (!state.isPanelOpen && entries.some(entry => entry.isIntersecting) && state.currentBatch * config.batchSize < state.images.length) {
+                loadImages();
+            }
         }, { rootMargin: config.intersectionObserverRootMargin, threshold: config.intersectionObserverThreshold });
 
-        const gridItems = elements.bookGrid.querySelectorAll('.grid-item');
-        gridItems.forEach(item => observer.observe(item));
+        const lastGridItem = elements.bookGrid.lastElementChild;
+        if (lastGridItem) {
+            observer.observe(lastGridItem);
+        }
     };
 
     const redirectSearchResults = (query) => {
@@ -199,59 +164,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const performSearch = (event) => {
         event.preventDefault();
-        const query = elements.searchInput.value.trim();
+        const query = elements.searchInput?.value.trim();
         if (query) {
             redirectSearchResults(query);
         }
     };
 
-    const debounce = (func, wait) => {
-        let timeout;
-        return function (...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
+    const togglePanel = (panel) => {
+        if (panel) {
+            panel.classList.toggle('active');
+            state.isPanelOpen = panel.classList.contains('active');
+        }
     };
 
-    const handleSearchInput = debounce((event) => {
+    elements.searchInput?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
             performSearch(event);
         }
-    }, config.searchDebounceTime);
-
-    elements.searchInput.addEventListener('keydown', handleSearchInput);
-    elements.searchButton.addEventListener('click', performSearch);
-    elements.menuBtn.addEventListener('click', () => togglePanel(elements.menuPanel));
-
+    });
+    elements.searchButton?.addEventListener('click', performSearch);
+    elements.menuBtn?.addEventListener('click', () => togglePanel(elements.menuPanel));
+    
     document.getElementById('library-link')?.addEventListener('click', () => {
-        elements.menuPanel.classList.remove('active');
+        elements.menuPanel?.classList.remove('active');
         togglePanel(elements.libraryPanel);
     });
-
+    
     document.getElementById('settings-link')?.addEventListener('click', () => {
-        elements.menuPanel.classList.remove('active');
+        elements.menuPanel?.classList.remove('active');
         togglePanel(elements.settingsPanel);
     });
-
+    
     document.addEventListener('click', (event) => {
         if (!event.target.closest('.panel') && !event.target.closest('.menu-btn')) {
-            [elements.menuPanel, elements.libraryPanel, elements.settingsPanel].forEach(panel => panel.classList.remove('active'));
+            [elements.menuPanel, elements.libraryPanel, elements.settingsPanel].forEach(panel => panel?.classList.remove('active'));
             state.isPanelOpen = false;
         }
     });
-
+    
     elements.themeToggle?.addEventListener('change', () => {
         document.body.classList.toggle('dark-theme');
         localStorage.setItem('darkTheme', document.body.classList.contains('dark-theme'));
     });
-
-    const togglePanel = (panel) => {
-        if (panel) {
-            panel.classList.toggle('active');
-            panel.setAttribute('aria-hidden', !panel.classList.contains('active'));
-            state.isPanelOpen = panel.classList.contains('active');
-        }
-    };
 
     const init = async () => {
         const savedTheme = localStorage.getItem('darkTheme');
