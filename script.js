@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const config = {
         proxyUrl: 'https://api.allorigins.win/raw?url=',
         targetUrl: 'https://jnovels.com/top-light-novels-to-read/',
-        batchSize: 70,
+        batchSize: 40,
         maxRetries: 3,
         retryDelay: 1000,
         searchDebounceTime: 300,
@@ -32,8 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
         isLoading: false,
         isPanelOpen: false,
         pdfUrlToTextMap: new Map(),
-        cachedHtml: null,
     };
+
+    const db = new Dexie("NovelDatabase");
+    db.version(1).stores({
+        htmlContent: "++id, content"
+    });
 
     const createElement = (type, attributes = {}, ...children) => {
         const element = document.createElement(type);
@@ -47,12 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = setTimeout(() => controller.abort(), timeout);
         try {
             const response = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(id);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             return await response.text();
         } catch (error) {
-            throw new Error(`Fetch failed: ${error.message}`);
-        } finally {
             clearTimeout(id);
+            throw new Error(`Fetch failed: ${error.message}`);
         }
     };
 
@@ -63,28 +67,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.errorMessage) {
             elements.errorMessage.textContent = message;
             elements.errorMessage.classList.add('active');
-            setTimeout(() => elements.errorMessage.classList.remove('active'), config.errorMessageDisplayTime);
+            setTimeout(() => elements.errorMessage?.classList.remove('active'), config.errorMessageDisplayTime);
         }
     };
 
-    const exponentialBackoff = (retryCount) => {
-        return Math.pow(2, retryCount) * config.retryDelay;
-    };
-
-    const fetchAndCacheHtml = async () => {
+    const fetchAndLoadImages = async () => {
         if (state.isLoading || state.isPanelOpen) return;
         state.isLoading = true;
         showLoadingSpinner();
         try {
-            const fullHtml = await fetchWithTimeout(`${config.proxyUrl}${encodeURIComponent(config.targetUrl)}`);
-            const doc = new DOMParser().parseFromString(fullHtml, 'text/html');
-            if (doc) {
-                state.cachedHtml = doc;
-                extractImagesAndPdfLinks();
-                if (state.images.length > 0) {
-                    await loadImagesAndPdfLinks();
-                    setupIntersectionObserver();
-                }
+            const storedHtml = await db.htmlContent.get(1);
+            let html;
+            if (storedHtml) {
+                html = storedHtml.content;
+            } else {
+                html = await fetchWithTimeout(`${config.proxyUrl}${encodeURIComponent(config.targetUrl)}`);
+                await db.htmlContent.put({ id: 1, content: html });
+            }
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            extractImagesAndPdfLinks(doc);
+            if (state.images.length > 0) {
+                await loadImages();
+                setupIntersectionObserver();
             }
         } catch (err) {
             console.error('Error during fetching or parsing:', err);
@@ -95,11 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const extractImagesAndPdfLinks = () => {
-        if (!state.cachedHtml) return;
-
-        const newImages = Array.from(state.cachedHtml.querySelectorAll('img[loading="lazy"][decoding="async"].alignnone'));
-        const pdfLinks = state.cachedHtml.querySelectorAll('h3 > a');
+    const extractImagesAndPdfLinks = (doc) => {
+        const newImages = Array.from(doc.querySelectorAll('img[loading="lazy"][decoding="async"].alignnone'));
+        const pdfLinks = doc.querySelectorAll('a[href]');
 
         pdfLinks.forEach(link => {
             const pdfUrl = link.href.trim();
@@ -115,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         newImages.forEach(img => state.loadedImages.add(img.src));
     };
 
-    const loadImagesAndPdfLinks = async () => {
+    const loadImages = async () => {
         const start = state.currentBatch * config.batchSize;
         const end = Math.min(start + config.batchSize, state.images.length);
         const batch = state.images.slice(start, end);
@@ -131,11 +133,10 @@ document.addEventListener('DOMContentLoaded', () => {
         imgElement.src = img.src;
         imgElement.className = 'lazyload';
         imgElement.alt = 'Book Cover';
-        imgElement.loading = 'lazy'; // Native lazy loading
         imgElement.onload = () => imgElement.style.display = 'block';
         imgElement.onerror = async () => {
             if (retryCount < config.maxRetries) {
-                setTimeout(() => createGridItem(img, retryCount + 1), exponentialBackoff(retryCount));
+                setTimeout(() => createGridItem(img, retryCount + 1), config.retryDelay);
             } else {
                 console.error(`Failed to load image after ${config.maxRetries} retries:`, img.src);
             }
@@ -158,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!elements.bookGrid) return;
         const observer = new IntersectionObserver((entries) => {
             if (!state.isPanelOpen && entries.some(entry => entry.isIntersecting) && state.currentBatch * config.batchSize < state.images.length) {
-                loadImagesAndPdfLinks();
+                loadImages();
             }
         }, { rootMargin: config.intersectionObserverRootMargin, threshold: config.intersectionObserverThreshold });
 
@@ -168,24 +169,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const performSearch = (query) => {
+    const redirectSearchResults = (query) => {
         const searchUrl = `search-results.html?query=${encodeURIComponent(query)}`;
         window.open(searchUrl, '_blank');
     };
 
-    const debounce = (func, delay) => {
-        let debounceTimer;
+    const debounce = (func, wait) => {
+        let timeout;
         return (...args) => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => func(...args), delay);
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
         };
     };
 
-    const handleSearch = debounce((event) => {
+    const performSearch = debounce((event) => {
         event.preventDefault();
         const query = elements.searchInput?.value.trim();
         if (query) {
-            performSearch(query);
+            redirectSearchResults(query);
         }
     }, config.searchDebounceTime);
 
@@ -196,35 +197,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    elements.searchInput?.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            handleSearch(event);
-        }
-    });
-    elements.searchButton?.addEventListener('click', handleSearch);
-    elements.menuBtn?.addEventListener('click', () => togglePanel(elements.menuPanel));
-
-    document.getElementById('library-link')?.addEventListener('click', () => {
-        elements.menuPanel?.classList.remove('active');
-        togglePanel(elements.libraryPanel);
-    });
-
-    document.getElementById('settings-link')?.addEventListener('click', () => {
-        elements.menuPanel?.classList.remove('active');
-        togglePanel(elements.settingsPanel);
-    });
-
-    document.addEventListener('click', (event) => {
+    const handleDocumentClick = (event) => {
         if (!event.target.closest('.panel') && !event.target.closest('.menu-btn')) {
             [elements.menuPanel, elements.libraryPanel, elements.settingsPanel].forEach(panel => panel?.classList.remove('active'));
             state.isPanelOpen = false;
         }
-    });
+    };
 
-    elements.themeToggle?.addEventListener('change', () => {
+    const handleThemeToggle = () => {
         document.body.classList.toggle('dark-theme');
         localStorage.setItem('darkTheme', document.body.classList.contains('dark-theme'));
-    });
+    };
 
     const init = async () => {
         const savedTheme = localStorage.getItem('darkTheme');
@@ -239,13 +222,32 @@ document.addEventListener('DOMContentLoaded', () => {
             AOS.init();
         }
 
-        await fetchAndCacheHtml();
+        await fetchAndLoadImages();
     };
 
-    window.addEventListener('beforeunload', () => {
-        state.cachedHtml = null;
-        state.loadedImages.clear();
-        state.pdfUrlToTextMap.clear();
+    elements.searchInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            performSearch(event);
+        }
+    });
+    elements.searchButton?.addEventListener('click', performSearch);
+    elements.menuBtn?.addEventListener('click', () => togglePanel(elements.menuPanel));
+
+    document.getElementById('library-link')?.addEventListener('click', () => {
+        elements.menuPanel?.classList.remove('active');
+        togglePanel(elements.libraryPanel);
+    });
+
+    document.getElementById('settings-link')?.addEventListener('click', () => {
+        elements.menuPanel?.classList.remove('active');
+        togglePanel(elements.settingsPanel);
+    });
+
+    document.addEventListener('click', handleDocumentClick);
+    elements.themeToggle?.addEventListener('change', handleThemeToggle);
+
+    window.addEventListener('beforeunload', async () => {
+        await db.htmlContent.clear();
     });
 
     init();
