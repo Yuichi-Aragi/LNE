@@ -159,7 +159,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const setupIntersectionObserver = () => {
         if (!elements.bookGrid) return;
-        const observer = new IntersectionObserver((entries) => {
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.classList.remove('lazyload');
+                    observer.unobserve(img);
+                }
+            });
+        }, { rootMargin: config.intersectionObserverRootMargin, threshold: config.intersectionObserverThreshold });
+
+        const lazyImages = document.querySelectorAll('img.lazyload');
+        lazyImages.forEach(img => {
+            img.dataset.src = img.src;
+            img.src = '';
+            observer.observe(img);
+        });
+
+        const contentObserver = new IntersectionObserver((entries) => {
             if (!state.isPanelOpen && entries.some(entry => entry.isIntersecting) && state.currentBatch * config.batchSize < state.images.length) {
                 loadContent();
             }
@@ -167,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const lastGridItem = elements.bookGrid.lastElementChild;
         if (lastGridItem) {
-            observer.observe(lastGridItem);
+            contentObserver.observe(lastGridItem);
         }
     };
 
