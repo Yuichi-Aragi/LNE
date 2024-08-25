@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = {
         currentBatch: 0,
         images: [],
+        pdfLinks: new Map(),
         loadedImages: new Set(),
         isLoading: false,
         isPanelOpen: false,
@@ -71,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const fetchAndLoadImages = async () => {
+    const fetchAndLoadContent = async () => {
         if (state.isLoading || state.isPanelOpen) return;
         state.isLoading = true;
         showLoadingSpinner();
@@ -85,9 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 await db.htmlContent.put({ id: 1, content: html });
             }
             const doc = new DOMParser().parseFromString(html, 'text/html');
-            extractImagesAndPdfLinks(doc);
-            if (state.images.length > 0) {
-                await loadImages();
+            extractContent(doc);
+            if (state.images.length > 0 || state.pdfLinks.size > 0) {
+                await loadContent();
                 setupIntersectionObserver();
             }
         } catch (err) {
@@ -99,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const extractImagesAndPdfLinks = (doc) => {
+    const extractContent = (doc) => {
         const newImages = Array.from(doc.querySelectorAll('img[loading="lazy"][decoding="async"].alignnone'));
         const pdfLinks = doc.querySelectorAll('a[href]');
 
@@ -110,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (pdfUrl && text) {
                 state.pdfUrlToTextMap.set(pdfUrl, (state.pdfUrlToTextMap.get(pdfUrl) || []).concat(text));
+                state.pdfLinks.set(pdfUrl, text);
             }
         });
 
@@ -117,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         newImages.forEach(img => state.loadedImages.add(img.src));
     };
 
-    const loadImages = async () => {
+    const loadContent = async () => {
         const start = state.currentBatch * config.batchSize;
         const end = Math.min(start + config.batchSize, state.images.length);
         const batch = state.images.slice(start, end);
@@ -159,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!elements.bookGrid) return;
         const observer = new IntersectionObserver((entries) => {
             if (!state.isPanelOpen && entries.some(entry => entry.isIntersecting) && state.currentBatch * config.batchSize < state.images.length) {
-                loadImages();
+                loadContent();
             }
         }, { rootMargin: config.intersectionObserverRootMargin, threshold: config.intersectionObserverThreshold });
 
@@ -222,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             AOS.init();
         }
 
-        await fetchAndLoadImages();
+        await fetchAndLoadContent();
     };
 
     elements.searchInput?.addEventListener('keydown', (event) => {
