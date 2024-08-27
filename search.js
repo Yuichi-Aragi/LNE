@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingSpinner: document.getElementById('loading-spinner'),
         errorMessage: document.getElementById('error-message')
     };
-    
+
     const state = {
         searchInProgress: false
     };

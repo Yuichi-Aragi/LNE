@@ -5,47 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Top Light Novels</title>
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Preconnect to important third-party origins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://api.allorigins.win">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com">
+
+    <!-- Font Stylesheets -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/dexie@latest/dist/dexie.min.js"></script>
+
+    <!-- Dexie.js -->
+    <script src="https://cdn.jsdelivr.net/npm/dexie@latest/dist/dexie.min.js" defer></script>
+
+    <!-- Custom Script -->
     <script src="script.js" defer></script>
+
+    <!-- Ionic Framework -->
+    <script src="https://unpkg.com/@ionic/core@latest/dist/ionic/ionic.js" async></script>
 </head>
 <body>
     <header>
-        <button class="menu-btn" aria-label="Open Menu">
+        <button class="menu-btn" aria-label="Open Menu" aria-controls="menu-panel" aria-expanded="false">
             <ion-icon name="menu-outline" class="menu-icon"></ion-icon>
         </button>
-        <div class="search-bar">
+        <div class="search-bar" role="search">
             <input type="text" id="search-input" class="search-input" placeholder="Search..." aria-label="Search Novels">
-            <button id="search-button" class="search-btn" aria-label="Search">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l-4-4m0 0l4-4m-4 4h16" />
+            <button id="search-button" class="search-btn" aria-label="Search Novels">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l-4-4m0 0l4-4m-4 4h16"/>
                 </svg>
             </button>
         </div>
     </header>
     <main>
-        <div id="book-grid" class="book-grid" role="grid" aria-label="Top Light Novels Grid"></div>
+        <section id="book-grid" class="book-grid" role="grid" aria-label="Top Light Novels Grid"></section>
     </main>
-    <div id="menu-panel" class="panel" aria-hidden="true">
-        <h3>Menu</h3>
-        <ul>
+    <aside id="menu-panel" class="panel" aria-hidden="true" aria-labelledby="menu-btn">
+        <h3 id="menu-heading">Menu</h3>
+        <ul aria-labelledby="menu-heading">
             <li><a href="#" id="library-link">Library</a></li>
             <li><a href="#" id="settings-link">Settings</a></li>
         </ul>
-    </div>
-    <div id="library-panel" class="panel" aria-hidden="true">
+    </aside>
+    <aside id="library-panel" class="panel" aria-hidden="true">
         <h3>Library</h3>
         <!-- Additional content can go here -->
-    </div>
-    <div id="settings-panel" class="panel" aria-hidden="true">
+    </aside>
+    <aside id="settings-panel" class="panel" aria-hidden="true">
         <h3>Settings</h3>
         <label for="theme-toggle">Dark Theme</label>
         <input type="checkbox" id="theme-toggle">
-    </div>
-    <div id="loading-spinner" class="loading-spinner" aria-hidden="true"></div>
+    </aside>
+    <div id="loading-spinner" class="loading-spinner" aria-hidden="true" role="status" aria-label="Loading"></div>
     <div id="error-message" class="error-message" role="alert"></div>
-    <script src="https://unpkg.com/@ionic/core@latest/dist/ionic/ionic.js" async></script>
 </body>
 </html>

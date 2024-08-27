@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const config = {
         proxyUrl: 'https://api.allorigins.win/raw?url=',
         targetUrl: 'https://jnovels.com/top-light-novels-to-read/',
@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = {
         currentBatch: 0,
         images: [],
-        pdfLinks: new Map(),
         loadedImages: new Set(),
         isLoading: false,
         isPanelOpen: false,
@@ -72,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const fetchAndLoadContent = async () => {
+    const fetchAndLoadImages = async () => {
         if (state.isLoading || state.isPanelOpen) return;
         state.isLoading = true;
         showLoadingSpinner();
@@ -85,10 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 html = await fetchWithTimeout(`${config.proxyUrl}${encodeURIComponent(config.targetUrl)}`);
                 await db.htmlContent.put({ id: 1, content: html });
             }
-            const doc = new DOMParser().parseFromString(html, 'text/html');
-            extractContent(doc);
-            if (state.images.length > 0 || state.pdfLinks.size > 0) {
-                await loadContent();
+            extractImagesAndPdfLinks(html);
+            if (state.images.length > 0) {
+                loadImages();
                 setupIntersectionObserver();
             }
         } catch (err) {
@@ -100,7 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const extractContent = (doc) => {
+    const extractImagesAndPdfLinks = (html) => {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
         const newImages = Array.from(doc.querySelectorAll('img[loading="lazy"][decoding="async"].alignnone'));
         const pdfLinks = doc.querySelectorAll('a[href]');
 
@@ -111,7 +110,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (pdfUrl && text) {
                 state.pdfUrlToTextMap.set(pdfUrl, (state.pdfUrlToTextMap.get(pdfUrl) || []).concat(text));
-                state.pdfLinks.set(pdfUrl, text);
             }
         });
 
@@ -119,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         newImages.forEach(img => state.loadedImages.add(img.src));
     };
 
-    const loadContent = async () => {
+    const loadImages = async () => {
         const start = state.currentBatch * config.batchSize;
         const end = Math.min(start + config.batchSize, state.images.length);
         const batch = state.images.slice(start, end);
@@ -159,34 +157,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const setupIntersectionObserver = () => {
         if (!elements.bookGrid) return;
-
-        const observer = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    img.src = img.dataset.src;
-                    img.classList.remove('lazyload');
-                    observer.unobserve(img);
-                }
-            });
-        }, { rootMargin: config.intersectionObserverRootMargin, threshold: config.intersectionObserverThreshold });
-
-        const lazyImages = document.querySelectorAll('img.lazyload');
-        lazyImages.forEach(img => {
-            img.dataset.src = img.src;
-            img.src = '';
-            observer.observe(img);
-        });
-
-        const contentObserver = new IntersectionObserver((entries) => {
+        const observer = new IntersectionObserver((entries) => {
             if (!state.isPanelOpen && entries.some(entry => entry.isIntersecting) && state.currentBatch * config.batchSize < state.images.length) {
-                loadContent();
+                loadImages();
             }
         }, { rootMargin: config.intersectionObserverRootMargin, threshold: config.intersectionObserverThreshold });
 
         const lastGridItem = elements.bookGrid.lastElementChild;
         if (lastGridItem) {
-            contentObserver.observe(lastGridItem);
+            observer.observe(lastGridItem);
         }
     };
 
@@ -243,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
             AOS.init();
         }
 
-        await fetchAndLoadContent();
+        await fetchAndLoadImages();
     };
 
     elements.searchInput?.addEventListener('keydown', (event) => {
