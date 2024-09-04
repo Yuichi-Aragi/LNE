@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Top Light Novels</title>
+    <meta name="description" content="Discover the top light novels to read.">
+    <meta name="keywords" content="light novels, top novels, reading, books">
+
     <link rel="stylesheet" href="styles.css">
 
     <!-- Preconnect to important third-party origins -->
@@ -31,7 +34,7 @@
             <ion-icon name="menu-outline" class="menu-icon"></ion-icon>
         </button>
         <div class="search-bar" role="search">
-            <input type="text" id="search-input" class="search-input" placeholder="Search..." aria-label="Search Novels">
+            <input type="text" id="search-input" class="search-input" placeholder="Search..." aria-label="Search Novels" autocomplete="off">
             <button id="search-button" class="search-btn" aria-label="Search Novels">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l-4-4m0 0l4-4m-4 4h16"/>
@@ -39,26 +42,31 @@
             </button>
         </div>
     </header>
+
     <main>
         <section id="book-grid" class="book-grid" role="grid" aria-label="Top Light Novels Grid"></section>
     </main>
-    <aside id="menu-panel" class="panel" aria-hidden="true" aria-labelledby="menu-btn">
+
+    <aside id="menu-panel" class="panel" aria-hidden="true" aria-labelledby="menu-heading">
         <h3 id="menu-heading">Menu</h3>
-        <ul aria-labelledby="menu-heading">
+        <ul>
             <li><a href="#" id="library-link">Library</a></li>
             <li><a href="#" id="settings-link">Settings</a></li>
         </ul>
     </aside>
-    <aside id="library-panel" class="panel" aria-hidden="true">
-        <h3>Library</h3>
+
+    <aside id="library-panel" class="panel" aria-hidden="true" aria-labelledby="library-heading">
+        <h3 id="library-heading">Library</h3>
         <!-- Additional content can go here -->
     </aside>
-    <aside id="settings-panel" class="panel" aria-hidden="true">
-        <h3>Settings</h3>
+
+    <aside id="settings-panel" class="panel" aria-hidden="true" aria-labelledby="settings-heading">
+        <h3 id="settings-heading">Settings</h3>
         <label for="theme-toggle">Dark Theme</label>
-        <input type="checkbox" id="theme-toggle">
+        <input type="checkbox" id="theme-toggle" aria-label="Toggle Dark Theme">
     </aside>
+
     <div id="loading-spinner" class="loading-spinner" aria-hidden="true" role="status" aria-label="Loading"></div>
-    <div id="error-message" class="error-message" role="alert"></div>
+    <div id="error-message" class="error-message" role="alert" aria-live="assertive"></div>
 </body>
 </html>

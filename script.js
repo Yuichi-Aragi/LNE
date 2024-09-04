@@ -7,10 +7,10 @@ const config = {
     maxRetries: 3,
     retryDelay: 1000,
     searchDebounceTime: 300,
-    intersectionObserverThreshold: 0.1,
+    intersectionObserverThreshold: 0.2,
     intersectionObserverRootMargin: '250px',
     errorMessageDisplayTime: 5000,
-    fetchTimeout: 10000
+    fetchTimeout: 10000,
 };
 
 const state = {
@@ -22,12 +22,43 @@ const state = {
     pdfUrlToTextMap: new Map(),
 };
 
-class NovelWebsite {
+class Database {
     constructor() {
         this.db = new Dexie("NovelDatabase");
         this.db.version(1).stores({
             htmlContent: "++id, content"
         });
+    }
+
+    async getHtmlContent(id) {
+        try {
+            return await this.db.htmlContent.get(id) || null;
+        } catch (error) {
+            console.error('Database read error:', error);
+            return null;
+        }
+    }
+
+    async putHtmlContent(id, content) {
+        try {
+            await this.db.htmlContent.put({ id, content });
+        } catch (error) {
+            console.error('Database write error:', error);
+        }
+    }
+
+    async clearHtmlContent() {
+        try {
+            await this.db.htmlContent.clear();
+        } catch (error) {
+            console.error('Database clear error:', error);
+        }
+    }
+}
+
+class NovelWebsite {
+    constructor() {
+        this.db = new Database();
         this.elements = this.getElements();
         this.setupEventListeners();
     }
@@ -84,16 +115,23 @@ class NovelWebsite {
         this.toggleLoadingSpinner(true);
 
         try {
-            const storedHtml = await this.db.htmlContent.get(1);
+            const storedHtml = await this.db.getHtmlContent(1);
             const html = storedHtml ? storedHtml.content : await this.fetchWithTimeout(`${config.proxyUrl}${encodeURIComponent(config.targetUrl)}`);
-            
+
+            if (!html) {
+                this.showErrorMessage('No content fetched. Please try again later.');
+                return;
+            }
+
             if (!storedHtml) {
-                await this.db.htmlContent.put({ id: 1, content: html });
+                await this.db.putHtmlContent(1, html);
             }
             this.extractImagesAndPdfLinks(html);
             if (state.images.length > 0) {
                 await this.loadImages();
                 this.setupIntersectionObserver();
+            } else {
+                this.showErrorMessage('No images found. Please check the source.');
             }
         } catch (err) {
             console.error('Error during fetching or parsing:', err);
@@ -114,27 +152,36 @@ class NovelWebsite {
             return await response.text();
         } catch (error) {
             clearTimeout(timeoutId);
+            console.error('Fetch error:', error);
+            this.showErrorMessage('Network error. Please check your connection and try again.');
             throw new Error(`Fetch failed: ${error.message}`);
         }
     }
 
     extractImagesAndPdfLinks(html) {
+        if (!html) {
+            this.showErrorMessage('Failed to parse HTML content.');
+            return;
+        }
+
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         const newImages = Array.from(doc.querySelectorAll('img[loading="lazy"][decoding="async"].alignnone'));
         const pdfLinks = doc.querySelectorAll('a[href]');
 
         pdfLinks.forEach(link => {
+            if (!link.href || typeof link.href !== 'string') return;
+
             const pdfUrl = link.href.trim();
             const textSpan = link.querySelector('span[style="color: #ff6600;"]');
-            const text = textSpan ? textSpan.textContent.trim() : link.textContent.trim();
+            const text = textSpan ? textSpan.textContent?.trim() : link.textContent?.trim();
 
             if (pdfUrl && text) {
                 state.pdfUrlToTextMap.set(pdfUrl, (state.pdfUrlToTextMap.get(pdfUrl) || []).concat(text));
             }
         });
 
-        state.images = newImages.filter(img => !state.loadedImages.has(img.src));
+        state.images = newImages.filter(img => img.src && !state.loadedImages.has(img.src));
         newImages.forEach(img => state.loadedImages.add(img.src));
     }
 
@@ -144,36 +191,60 @@ class NovelWebsite {
         const batch = state.images.slice(start, end);
         const fragment = document.createDocumentFragment();
 
-        await Promise.all(batch.map(img => this.createGridItem(img).then(gridItem => fragment.appendChild(gridItem))));
+        if (batch.length === 0) {
+            this.showErrorMessage('No more images to load.');
+            return;
+        }
+
+        await Promise.all(batch.map(img => this.createGridItem(img).then(gridItem => {
+            if (gridItem) fragment.appendChild(gridItem);
+        })));
         this.elements.bookGrid?.appendChild(fragment);
         state.currentBatch++;
     }
 
     async createGridItem(img, retryCount = 0) {
+        if (!img || !img.src) {
+            console.error('Invalid image element:', img);
+            return null;
+        }
+
         const gridItem = this.createElement('div', { class: 'grid-item', 'data-aos': 'fade-up' });
         const imgElement = new Image();
         imgElement.src = img.src;
         imgElement.className = 'lazyload';
         imgElement.alt = 'Book Cover';
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             imgElement.onload = () => {
                 imgElement.style.display = 'block';
                 resolve(gridItem);
             };
             imgElement.onerror = async () => {
                 if (retryCount < config.maxRetries) {
-                    setTimeout(() => this.createGridItem(img, retryCount + 1).then(resolve, reject), config.retryDelay);
+                    setTimeout(() => this.createGridItem(img, retryCount + 1).then(resolve), config.retryDelay);
                 } else {
                     console.error(`Failed to load image after ${config.maxRetries} retries:`, img.src);
-                    reject(new Error(`Failed to load image: ${img.src}`));
+                    imgElement.src = config.fallbackImage;
+                    imgElement.onload = () => resolve(gridItem);
+                    imgElement.onerror = () => {
+                        this.showErrorMessage(`Failed to load image: ${img.src}`);
+                        resolve(null);
+                    };
                 }
             };
             gridItem.appendChild(imgElement);
 
             const aElement = img.closest('a');
             if (aElement?.href) {
-                imgElement.addEventListener('click', () => window.open(aElement.href, '_blank'));
+                imgElement.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (this.isValidUrl(aElement.href)) {
+                        window.open(aElement.href, '_blank', 'noopener,noreferrer');
+                    } else {
+                        this.showErrorMessage('Invalid link detected.');
+                    }
+                });
                 const texts = state.pdfUrlToTextMap.get(aElement.href);
                 if (texts?.length) {
                     const textElement = this.createElement('p', { class: 'textElement' }, texts.join(', '));
@@ -183,18 +254,36 @@ class NovelWebsite {
         });
     }
 
+    isValidUrl(url) {
+        if (typeof url !== 'string') return false;
+        try {
+            new URL(url);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     setupIntersectionObserver() {
         if (!this.elements.bookGrid) return;
+
         const observer = new IntersectionObserver((entries) => {
-            if (!state.isPanelOpen && entries.some(entry => entry.isIntersecting) && state.currentBatch * config.batchSize < state.images.length) {
+            const isVisible = entries.some(entry => entry.isIntersecting);
+            if (isVisible && state.currentBatch * config.batchSize < state.images.length && !state.isLoading) {
                 this.loadImages();
             }
         }, { rootMargin: config.intersectionObserverRootMargin, threshold: config.intersectionObserverThreshold });
 
-        const lastGridItem = this.elements.bookGrid.lastElementChild;
-        if (lastGridItem) {
-            observer.observe(lastGridItem);
-        }
+        const observeLastGridItem = () => {
+            const lastGridItem = this.elements.bookGrid.lastElementChild;
+            if (lastGridItem) {
+                observer.observe(lastGridItem);
+            } else {
+                observer.disconnect();
+            }
+        };
+
+        observeLastGridItem();
     }
 
     createElement(type, attributes = {}, ...children) {
@@ -211,7 +300,9 @@ class NovelWebsite {
     }
 
     toggleLoadingSpinner(isVisible) {
-        this.elements.loadingSpinner?.classList.toggle('active', isVisible);
+        if (this.elements.loadingSpinner) {
+            this.elements.loadingSpinner.classList.toggle('active', isVisible);
+        }
     }
 
     showErrorMessage(message) {
@@ -223,8 +314,20 @@ class NovelWebsite {
     }
 
     redirectSearchResults(query) {
-        const searchUrl = `search-results.html?query=${encodeURIComponent(query)}`;
-        window.open(searchUrl, '_blank');
+        const sanitizedQuery = this.sanitizeInput(query);
+        if (!sanitizedQuery) {
+            this.showErrorMessage('Invalid search query.');
+            return;
+        }
+        const searchUrl = `search-results.html?query=${encodeURIComponent(sanitizedQuery)}`;
+        window.open(searchUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    sanitizeInput(input) {
+        if (typeof input !== 'string') return '';
+        const tempDiv = document.createElement('div');
+        tempDiv.textContent = input;
+        return tempDiv.innerHTML;
     }
 
     debounce(func, wait) {
@@ -238,9 +341,15 @@ class NovelWebsite {
     performSearch = this.debounce((event) => {
         event.preventDefault();
         const query = this.elements.searchInput?.value.trim();
-        if (query) {
-            this.redirectSearchResults(query);
+        if (!query || query.length < 3) {
+            this.showErrorMessage('Search term must be at least 3 characters long.');
+            return;
         }
+        if (query.length > 100) {
+            this.showErrorMessage('Search term must be less than 100 characters.');
+            return;
+        }
+        this.redirectSearchResults(query);
     }, config.searchDebounceTime);
 
     togglePanel(panel) {
@@ -279,7 +388,11 @@ class NovelWebsite {
     }
 
     async handleBeforeUnload() {
-        await this.db.htmlContent.clear();
+        try {
+            await this.db.clearHtmlContent();
+        } catch (error) {
+            console.error('Error clearing database on unload:', error);
+        }
     }
 }
 
