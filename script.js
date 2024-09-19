@@ -1,7 +1,7 @@
 'use strict';
 
 const config = {
-    proxyUrl: 'https://api.allorigins.win/raw?url=',
+    proxyUrl: 'PROXY',
     targetUrl: 'https://jnovels.com/top-light-novels-to-read/',
     batchSize: 40,
     maxRetries: 3,
