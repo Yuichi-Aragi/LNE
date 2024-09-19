@@ -1,7 +1,7 @@
 'use strict';
 
 const config = {
-    proxyUrl: 'https://shy.gebep49539.workers.dev/',
+    proxyUrl: 'https://la.sehere2468.workers.dev/',
     targetUrl: 'https://jnovels.com/top-light-novels-to-read/',
     batchSize: 40,
     maxRetries: 3,
