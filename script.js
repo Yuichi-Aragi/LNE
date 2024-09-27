@@ -1,7 +1,7 @@
 'use strict';
 
 const config = {
-    proxyUrl: 'https://sp.yukag.workers.dev/',
+    proxyUrl: 'https://sp.yukag.workers.dev/?target=',
     targetUrl: 'https://jnovels.com/top-light-novels-to-read/',
     batchSize: 40,
     maxRetries: 3,
