@@ -1,39 +1,28 @@
-/* Base styles and variables */
 :root {
-  /* Color palette */
   --color-primary: #333;
   --color-secondary: #f5f5f5;
   --color-text: #333;
   --color-background: #f5f5f5;
   --color-shadow: rgba(0, 0, 0, 0.1);
   --color-hover: #666;
-
-  /* Typography */
   --font-primary: 'Montserrat', sans-serif;
   --font-secondary: 'Playfair Display', serif;
   --font-size-base: 16px;
   --font-size-h1: 2.5rem;
   --font-size-h2: 2rem;
   --font-size-h3: 1.75rem;
-
-  /* Spacing */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
-
-  /* Transitions */
   --transition-speed: 0.3s;
   --transition-timing: ease-in-out;
-
-  /* Layout */
   --header-height: 60px;
   --container-max-width: 1200px;
   --border-radius: 10px;
 }
 
-/* Dark theme */
 .dark-theme {
   --color-primary: #f5f5f5;
   --color-secondary: #333;
@@ -43,13 +32,9 @@
   --color-hover: #ddd;
 }
 
-/* Typography */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap');
 
-/* Reset and base styles */
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
@@ -69,7 +54,6 @@ body {
   line-height: 1.6;
 }
 
-/* Header styles */
 header {
   position: fixed;
   top: 0;
@@ -86,37 +70,30 @@ header {
   box-shadow: 0 2px 5px var(--color-shadow);
 }
 
-/* Menu button styles */
-.menu-btn {
+.menu-btn, .back-btn {
   background-color: transparent;
   border: none;
   cursor: pointer;
   width: 40px;
   height: 40px;
-  position: fixed;
-  top: var(--spacing-sm);
-  right: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
-  z-index: 102;
   transition: transform var(--transition-speed) var(--transition-timing);
 }
 
-.menu-btn:hover,
-.menu-btn:focus {
+.menu-btn:hover, .menu-btn:focus,
+.back-btn:hover, .back-btn:focus {
   transform: scale(1.1);
   outline: none;
 }
 
-.menu-icon {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 32px;
-  height: 32px;
+.menu-icon, .back-btn ion-icon {
+  font-size: 24px;
+  color: var(--color-secondary);
 }
 
-/* Search bar styles */
 .search-bar {
   display: flex;
   align-items: center;
@@ -158,35 +135,25 @@ header {
   transition: transform var(--transition-speed) var(--transition-timing);
 }
 
-.search-btn:hover,
-.search-btn:focus {
+.search-btn:hover, .search-btn:focus {
   transform: scale(1.1);
   outline: none;
 }
 
-.search-btn svg {
-  width: 20px;
-  height: 20px;
-  stroke: black; var(--color-text);
-  transition: stroke var(--transition-speed) var(--transition-timing);
+.search-btn ion-icon {
+  font-size: 20px;
+  color: var(--color-text);
 }
 
-.search-btn:hover svg,
-.search-btn:focus svg {
-  stroke: black; var(--color-hover);
-}
-
-/* Main content styles */
 main {
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
   min-height: calc(100vh - var(--header-height));
   padding: var(--spacing-xl);
   margin-top: var(--header-height);
 }
 
-/* Book grid styles */
 .book-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -215,17 +182,13 @@ main {
   transition: transform var(--transition-speed) var(--transition-timing);
 }
 
-.grid-item:hover,
-.grid-item:focus {
+.grid-item:hover, .grid-item:focus {
   transform: translateY(-5px);
   box-shadow: 0 4px 10px var(--color-shadow);
-  animation: slideUp var(--transition-speed) var(--transition-timing);
 }
 
-.grid-item:hover img,
-.grid-item:focus img {
+.grid-item:hover img, .grid-item:focus img {
   transform: scale(1.05);
-  animation: slideUp var(--transition-speed) var(--transition-timing);
 }
 
 .textElement {
@@ -243,12 +206,10 @@ main {
   transition: opacity var(--transition-speed) var(--transition-timing);
 }
 
-.grid-item:hover .textElement,
-.grid-item:focus .textElement {
+.grid-item:hover .textElement, .grid-item:focus .textElement {
   opacity: 1;
 }
 
-/* Panel styles */
 .panel {
   position: fixed;
   top: 0;
@@ -297,8 +258,7 @@ main {
   box-shadow: 0 2px 5px var(--color-shadow);
 }
 
-.panel a:hover,
-.panel a:focus {
+.panel a:hover, .panel a:focus {
   color: var(--color-hover);
   background-color: var(--color-primary);
   outline: none;
@@ -308,7 +268,6 @@ main {
   right: 0;
 }
 
-/* Loading spinner styles */
 .loading-spinner {
   display: none;
   position: fixed;
@@ -328,7 +287,6 @@ main {
   display: block;
 }
 
-/* Error message styles */
 .error-message {
   position: fixed;
   bottom: var(--spacing-md);
@@ -347,7 +305,6 @@ main {
   display: block;
 }
 
-/* Settings and Sliders */
 .settings-option {
   margin-bottom: var(--spacing-lg);
   width: 100%;
@@ -405,44 +362,6 @@ input:checked + .slider:before {
   transform: translateX(26px);
 }
 
-.slider-container {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.slider-labels {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  margin-bottom: var(--spacing-sm);
-}
-
-input[type="range"] {
-  width: 100%;
-  -webkit-appearance: none;
-  background: transparent;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  height: 16px;
-  width: 16px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  cursor: pointer;
-  margin-top: -5px;
-}
-
-input[type="range"]::-webkit-slider-runnable-track {
-  width: 100%;
-  height: 6px;
-  background: var(--color-secondary);
-  border-radius: 3px;
-}
-
-/* Animations */
 @keyframes fadeIn {
   0% { opacity: 0; }
   100% { opacity: 1; }
@@ -467,12 +386,10 @@ input[type="range"]::-webkit-slider-runnable-track {
   animation: slideUp var(--transition-speed) var(--transition-timing);
 }
 
-.search-bar,
-.menu-btn {
+.search-bar, .menu-btn {
   animation: scaleIn var(--transition-speed) var(--transition-timing);
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .book-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

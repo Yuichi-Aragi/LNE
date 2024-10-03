@@ -3,35 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Results</title>
+    <title>Search Results - Top Light Novels</title>
+    <meta name="description" content="Search results for light novels">
+    <meta name="keywords" content="light novels, search results, books, literature">
     <link rel="stylesheet" href="styles.css">
-
-    <!-- Preconnect to important third-party origins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://api.allorigins.win">
-
-    <!-- Font Stylesheets -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
-
-    <!-- Custom Script -->
-    <script src="search.js" defer></script>
+    <script src="search.js" type="module" defer></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
     <header>
+        <a href="index.html" class="back-btn" aria-label="Back to Home">
+            <ion-icon name="arrow-back-outline"></ion-icon>
+        </a>
         <div class="search-bar">
             <input type="text" id="search-input" class="search-input" placeholder="Search..." aria-label="Search Novels">
             <button id="search-button" class="search-btn" aria-label="Search">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l-4-4m0 0l4-4m-4 4h16" />
-                </svg>
+                <ion-icon name="search-outline"></ion-icon>
             </button>
         </div>
     </header>
     <main>
-        <div id="results-grid" class="book-grid" role="grid" aria-label="Search Results Grid"></div>
+        <h1 id="search-results-heading">Search Results</h1>
+        <div id="results-grid" class="book-grid" role="grid" aria-labelledby="search-results-heading"></div>
     </main>
-    <div id="loading-spinner" class="loading-spinner" aria-hidden="true"></div>
-    <div id="error-message" class="error-message" role="alert"></div>
+    <div id="loading-spinner" class="loading-spinner" aria-hidden="true" role="status" aria-label="Loading"></div>
+    <div id="error-message" class="error-message" role="alert" aria-live="assertive"></div>
 </body>
 </html>

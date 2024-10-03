@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const config = {
-        proxyUrl: 'https://api.allorigins.win/raw?url=',
+        proxyUrl: 'https://sh.dafeyan784.workers.dev/?target=',
         searchDebounceTime: 300,
         maxRetries: 3,
         retryDelay: 1000,

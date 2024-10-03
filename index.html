@@ -4,29 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Top Light Novels</title>
-    <meta name="description" content="Discover the top light novels to read.">
-    <meta name="keywords" content="light novels, top novels, reading, books">
-
+    <meta name="description" content="Discover and explore the top light novels to read.">
+    <meta name="keywords" content="light novels, top novels, reading, books, literature">
     <link rel="stylesheet" href="styles.css">
-
-    <!-- Preconnect to important third-party origins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://api.allorigins.win">
+    <link rel="preconnect" href="https://www.cloudflare.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://unpkg.com">
-
-    <!-- Font Stylesheets -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
-
-    <!-- Dexie.js -->
     <script src="https://cdn.jsdelivr.net/npm/dexie@latest/dist/dexie.min.js" defer></script>
-
-    <!-- Custom Script -->
-    <script src="script.js" defer></script>
-
-    <!-- Ionic Framework -->
-    <script src="https://unpkg.com/@ionic/core@latest/dist/ionic/ionic.js" async></script>
+    <script src="script.js" type="module" defer></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
     <header>
@@ -36,9 +26,7 @@
         <div class="search-bar" role="search">
             <input type="text" id="search-input" class="search-input" placeholder="Search..." aria-label="Search Novels" autocomplete="off">
             <button id="search-button" class="search-btn" aria-label="Search Novels">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16l-4-4m0 0l4-4m-4 4h16"/>
-                </svg>
+                <ion-icon name="search-outline"></ion-icon>
             </button>
         </div>
     </header>
@@ -49,21 +37,28 @@
 
     <aside id="menu-panel" class="panel" aria-hidden="true" aria-labelledby="menu-heading">
         <h3 id="menu-heading">Menu</h3>
-        <ul>
-            <li><a href="#" id="library-link">Library</a></li>
-            <li><a href="#" id="settings-link">Settings</a></li>
-        </ul>
+        <nav>
+            <ul>
+                <li><a href="#" id="library-link">Library</a></li>
+                <li><a href="#" id="settings-link">Settings</a></li>
+            </ul>
+        </nav>
     </aside>
 
     <aside id="library-panel" class="panel" aria-hidden="true" aria-labelledby="library-heading">
         <h3 id="library-heading">Library</h3>
-        <!-- Additional content can go here -->
+        <div id="library-content"></div>
     </aside>
 
     <aside id="settings-panel" class="panel" aria-hidden="true" aria-labelledby="settings-heading">
         <h3 id="settings-heading">Settings</h3>
-        <label for="theme-toggle">Dark Theme</label>
-        <input type="checkbox" id="theme-toggle" aria-label="Toggle Dark Theme">
+        <div class="settings-option">
+            <label for="theme-toggle">Dark Theme</label>
+            <div class="toggle-switch">
+                <input type="checkbox" id="theme-toggle" aria-label="Toggle Dark Theme">
+                <span class="slider"></span>
+            </div>
+        </div>
     </aside>
 
     <div id="loading-spinner" class="loading-spinner" aria-hidden="true" role="status" aria-label="Loading"></div>

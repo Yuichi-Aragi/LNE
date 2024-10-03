@@ -1,7 +1,7 @@
 'use strict';
 
 const config = {
-    proxyUrl: 'https://b.yukag.workers.dev/?target=',
+    proxyUrl: 'https://sh.dafeyan784.workers.dev/?target=',
     targetUrl: 'https://jnovels.com/top-light-novels-to-read/',
     batchSize: 40,
     maxRetries: 3,
@@ -11,55 +11,21 @@ const config = {
     intersectionObserverRootMargin: '250px',
     errorMessageDisplayTime: 5000,
     fetchTimeout: 10000,
+    fallbackImage: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300"%3E%3Crect width="100%" height="100%" fill="%23f0f0f0"/%3E%3Ctext x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="%23999"%3EImage not available%3C/text%3E%3C/svg%3E'
 };
-
-const state = {
-    currentBatch: 0,
-    images: [],
-    loadedImages: new Set(),
-    isLoading: false,
-    isPanelOpen: false,
-    pdfUrlToTextMap: new Map(),
-};
-
-class Database {
-    constructor() {
-        this.db = new Dexie("NovelDatabase");
-        this.db.version(1).stores({
-            htmlContent: "++id, content"
-        });
-    }
-
-    async getHtmlContent(id) {
-        try {
-            return await this.db.htmlContent.get(id) || null;
-        } catch (error) {
-            console.error('Database read error:', error);
-            return null;
-        }
-    }
-
-    async putHtmlContent(id, content) {
-        try {
-            await this.db.htmlContent.put({ id, content });
-        } catch (error) {
-            console.error('Database write error:', error);
-        }
-    }
-
-    async clearHtmlContent() {
-        try {
-            await this.db.htmlContent.clear();
-        } catch (error) {
-            console.error('Database clear error:', error);
-        }
-    }
-}
 
 class NovelWebsite {
     constructor() {
         this.db = new Database();
         this.elements = this.getElements();
+        this.state = {
+            currentBatch: 0,
+            images: [],
+            loadedImages: new Set(),
+            isLoading: false,
+            isPanelOpen: false,
+            pdfUrlToTextMap: new Map(),
+        };
         this.setupEventListeners();
     }
 
@@ -110,8 +76,8 @@ class NovelWebsite {
     }
 
     async fetchAndLoadImages() {
-        if (state.isLoading || state.isPanelOpen) return;
-        state.isLoading = true;
+        if (this.state.isLoading || this.state.isPanelOpen) return;
+        this.state.isLoading = true;
         this.toggleLoadingSpinner(true);
 
         try {
@@ -127,7 +93,7 @@ class NovelWebsite {
                 await this.db.putHtmlContent(1, html);
             }
             this.extractImagesAndPdfLinks(html);
-            if (state.images.length > 0) {
+            if (this.state.images.length > 0) {
                 await this.loadImages();
                 this.setupIntersectionObserver();
             } else {
@@ -137,7 +103,7 @@ class NovelWebsite {
             console.error('Error during fetching or parsing:', err);
             this.showErrorMessage('Failed to fetch books. Please try again later.');
         } finally {
-            state.isLoading = false;
+            this.state.isLoading = false;
             this.toggleLoadingSpinner(false);
         }
     }
@@ -177,18 +143,18 @@ class NovelWebsite {
             const text = textSpan ? textSpan.textContent?.trim() : link.textContent?.trim();
 
             if (pdfUrl && text) {
-                state.pdfUrlToTextMap.set(pdfUrl, (state.pdfUrlToTextMap.get(pdfUrl) || []).concat(text));
+                this.state.pdfUrlToTextMap.set(pdfUrl, (this.state.pdfUrlToTextMap.get(pdfUrl) || []).concat(text));
             }
         });
 
-        state.images = newImages.filter(img => img.src && !state.loadedImages.has(img.src));
-        newImages.forEach(img => state.loadedImages.add(img.src));
+        this.state.images = newImages.filter(img => img.src && !this.state.loadedImages.has(img.src));
+        newImages.forEach(img => this.state.loadedImages.add(img.src));
     }
 
     async loadImages() {
-        const start = state.currentBatch * config.batchSize;
-        const end = Math.min(start + config.batchSize, state.images.length);
-        const batch = state.images.slice(start, end);
+        const start = this.state.currentBatch * config.batchSize;
+        const end = Math.min(start + config.batchSize, this.state.images.length);
+        const batch = this.state.images.slice(start, end);
         const fragment = document.createDocumentFragment();
 
         if (batch.length === 0) {
@@ -200,7 +166,7 @@ class NovelWebsite {
             if (gridItem) fragment.appendChild(gridItem);
         })));
         this.elements.bookGrid?.appendChild(fragment);
-        state.currentBatch++;
+        this.state.currentBatch++;
     }
 
     async createGridItem(img, retryCount = 0) {
@@ -245,7 +211,7 @@ class NovelWebsite {
                         this.showErrorMessage('Invalid link detected.');
                     }
                 });
-                const texts = state.pdfUrlToTextMap.get(aElement.href);
+                const texts = this.state.pdfUrlToTextMap.get(aElement.href);
                 if (texts?.length) {
                     const textElement = this.createElement('p', { class: 'textElement' }, texts.join(', '));
                     gridItem.appendChild(textElement);
@@ -269,7 +235,7 @@ class NovelWebsite {
 
         const observer = new IntersectionObserver((entries) => {
             const isVisible = entries.some(entry => entry.isIntersecting);
-            if (isVisible && state.currentBatch * config.batchSize < state.images.length && !state.isLoading) {
+            if (isVisible && this.state.currentBatch * config.batchSize < this.state.images.length && !this.state.isLoading) {
                 this.loadImages();
             }
         }, { rootMargin: config.intersectionObserverRootMargin, threshold: config.intersectionObserverThreshold });
@@ -355,14 +321,14 @@ class NovelWebsite {
     togglePanel(panel) {
         if (panel) {
             panel.classList.toggle('active');
-            state.isPanelOpen = panel.classList.contains('active');
+            this.state.isPanelOpen = panel.classList.contains('active');
         }
     }
 
     handleDocumentClick(event) {
         if (!event.target.closest('.panel') && !event.target.closest('.menu-btn')) {
             [this.elements.menuPanel, this.elements.libraryPanel, this.elements.settingsPanel].forEach(panel => panel?.classList.remove('active'));
-            state.isPanelOpen = false;
+            this.state.isPanelOpen = false;
         }
     }
 
@@ -392,6 +358,40 @@ class NovelWebsite {
             await this.db.clearHtmlContent();
         } catch (error) {
             console.error('Error clearing database on unload:', error);
+        }
+    }
+}
+
+class Database {
+    constructor() {
+        this.db = new Dexie("NovelDatabase");
+        this.db.version(1).stores({
+            htmlContent: "++id, content"
+        });
+    }
+
+    async getHtmlContent(id) {
+        try {
+            return await this.db.htmlContent.get(id) || null;
+        } catch (error) {
+            console.error('Database read error:', error);
+            return null;
+        }
+    }
+
+    async putHtmlContent(id, content) {
+        try {
+            await this.db.htmlContent.put({ id, content });
+        } catch (error) {
+            console.error('Database write error:', error);
+        }
+    }
+
+    async clearHtmlContent() {
+        try {
+            await this.db.htmlContent.clear();
+        } catch (error) {
+            console.error('Database clear error:', error);
         }
     }
 }
