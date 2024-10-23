@@ -1,1 +1,145 @@
-<!doctypehtml><html lang=en><meta charset=UTF-8><meta content="width=device-width,initial-scale=1"name=viewport><title>Top Light Novels</title><meta content="Discover and explore the top light novels to read."name=description><meta content="light novels, top novels, reading, books, literature"name=keywords><link href=styles.css rel=stylesheet><link href=https://fonts.googleapis.com rel=preconnect><link href=https://fonts.gstatic.com rel=preconnect crossorigin><link href=https://www.cloudflare.com rel=preconnect><link href=https://cdn.jsdelivr.net rel=preconnect><link href=https://unpkg.com rel=preconnect><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap"rel=stylesheet><script src=https://cdn.jsdelivr.net/npm/dexie@latest/dist/dexie.min.js defer></script><script src=script.js defer type=module></script><script src=https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js type=module></script><script src=https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js nomodule></script><header><button aria-label="Open Menu"class=menu-btn aria-controls=menu-panel aria-expanded=false><ion-icon name=menu-outline class=menu-icon></ion-icon></button><div class=search-bar role=search><input aria-label="Search Novels"id=search-input autocomplete=off class=search-input placeholder=Search...> <button aria-label="Search Novels"class=search-btn id=search-button><ion-icon name=search-outline></ion-icon></button></div></header><main><section aria-label="Top Light Novels Grid"class=book-grid id=book-grid role=grid></section></main><aside aria-hidden=true aria-labelledby=menu-heading class=panel id=menu-panel><h3 id=menu-heading>Menu</h3><nav><ul><li><a href=# id=library-link>Library</a><li><a href=# id=settings-link>Settings</a></ul></nav></aside><aside aria-hidden=true aria-labelledby=library-heading class=panel id=library-panel><h3 id=library-heading>Library</h3><div id=library-content></div></aside><aside aria-hidden=true aria-labelledby=settings-heading class=panel id=settings-panel><h3 id=settings-heading>Settings</h3><div class=settings-option><label for=theme-toggle>Dark Theme</label><div class=toggle-switch><input aria-label="Toggle Dark Theme"id=theme-toggle type=checkbox> <span class=slider></span></div></div></aside><div class=loading-spinner role=status id=loading-spinner aria-hidden=true aria-label=Loading></div><div class=error-message role=alert id=error-message aria-live=assertive></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top Light Novels</title>
+    <meta name="description" content="Discover and explore the top light novels to read.">
+    <meta name="keywords" content="light novels, top novels, reading, books, literature">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- AOS (Animate On Scroll) CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    
+    <!-- Ionicons -->
+    <link href="https://unpkg.com/ionicons@7.1.0/dist/ionicons.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link href="styles.css" rel="stylesheet">
+    
+    <!-- Dexie.js for IndexedDB -->
+    <script src="https://cdn.jsdelivr.net/npm/dexie@3/dist/dexie.min.js" defer></script>
+    
+    <!-- AOS (Animate On Scroll) JS -->
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.min.js" defer></script>
+    
+    <!-- Ionicons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js" defer></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js" defer></script>
+    
+    <!-- Main JavaScript -->
+    <script src="script.js" type="module" defer></script>
+</head>
+<body>
+    <!-- Header Section -->
+    <header>
+        <!-- Menu Button -->
+        <button 
+            aria-label="Open Menu" 
+            class="menu-btn" 
+            aria-controls="menu-panel" 
+            aria-expanded="false"
+        >
+            <ion-icon name="menu-outline" class="menu-icon"></ion-icon>
+        </button>
+        
+        <!-- Search Bar -->
+        <div class="search-bar" role="search">
+            <input 
+                aria-label="Search Novels" 
+                id="search-input" 
+                autocomplete="off" 
+                class="search-input" 
+                placeholder="Search..."
+            >
+            <button 
+                aria-label="Search Novels" 
+                class="search-btn" 
+                id="search-button"
+            >
+                <ion-icon name="search-outline"></ion-icon>
+            </button>
+        </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main>
+        <!-- Book Grid Section -->
+        <section 
+            aria-label="Top Light Novels Grid" 
+            class="book-grid" 
+            id="book-grid" 
+            role="grid"
+        ></section>
+    </main>
+    
+    <!-- Menu Panel -->
+    <aside 
+        aria-hidden="true" 
+        aria-labelledby="menu-heading" 
+        class="panel" 
+        id="menu-panel"
+    >
+        <h3 id="menu-heading">Menu</h3>
+        <nav>
+            <ul>
+                <li><a href="#" id="library-link">Library</a></li>
+                <li><a href="#" id="settings-link">Settings</a></li>
+            </ul>
+        </nav>
+    </aside>
+    
+    <!-- Library Panel -->
+    <aside 
+        aria-hidden="true" 
+        aria-labelledby="library-heading" 
+        class="panel" 
+        id="library-panel"
+    >
+        <h3 id="library-heading">Library</h3>
+        <div id="library-content"></div>
+    </aside>
+    
+    <!-- Settings Panel -->
+    <aside 
+        aria-hidden="true" 
+        aria-labelledby="settings-heading" 
+        class="panel" 
+        id="settings-panel"
+    >
+        <h3 id="settings-heading">Settings</h3>
+        <div class="settings-option">
+            <label for="theme-toggle">Dark Theme</label>
+            <div class="toggle-switch">
+                <input 
+                    aria-label="Toggle Dark Theme" 
+                    id="theme-toggle" 
+                    type="checkbox"
+                >
+                <span class="slider"></span>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- Loading Spinner -->
+    <div 
+        class="loading-spinner" 
+        role="status" 
+        id="loading-spinner" 
+        aria-hidden="true" 
+        aria-label="Loading"
+    ></div>
+    
+    <!-- Error Message -->
+    <div 
+        class="error-message" 
+        role="alert" 
+        id="error-message" 
+        aria-live="assertive"
+    ></div>
+</body>
+</html>
