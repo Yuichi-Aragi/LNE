@@ -1,4 +1,4 @@
-javascript:(function(){
+(function(){
     try {
         // Configuration
         const MAX_IMAGES = 100; // Maximum number of images to extract
